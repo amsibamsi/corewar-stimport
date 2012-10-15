@@ -37,15 +37,15 @@ withCoreSize: anInteger
 		size: anInteger;
 		yourself.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/16/2007 01:25'!
-addProgram: aCWProgram
+!CWMars methodsFor: 'public' stamp: 'as 4/17/2007 15:52'!
+addProgram: aCWRedcode
 
-	self programs add: aCWProgram.! !
+	self programs add: aCWRedcode.! !
 
-!CWMars methodsFor: 'accessing' stamp: 'as 4/17/2007 11:53'!
+!CWMars methodsFor: 'accessing' stamp: 'as 4/17/2007 19:34'!
 core
 
-	^ core ifNil: [ core _ Array with: self size. ].! !
+	^ core ifNil: [ core _ OrderedCollection new: self size. ].! !
 
 !CWMars methodsFor: 'public' stamp: 'as 4/16/2007 11:28'!
 coreSize
@@ -57,10 +57,48 @@ defaultSize
 
 	^ 4096.! !
 
+!CWMars methodsFor: 'core' stamp: 'as 4/17/2007 15:48'!
+initialCoreValue
+
+	"The initial value at any address in the core."
+	
+	^ 0.! !
+
+!CWMars methodsFor: 'core' stamp: 'as 4/17/2007 15:07'!
+internalAddress: anInteger
+
+	"Internally the core is an array with indices from 1 to <size>.
+	 From outside addresses go normally from 0 to size-1.
+	 The address space is interpreted as ring, so out of bounds
+	 addresses are not possible."
+	
+	| address |
+	
+	"Divide module for addresses that are too high."
+	address _ anInteger \\ self coreSize.
+	
+	"Convert negative addresses."
+	address negative ifTrue: [ address _ self coreSize - address. ].
+	
+	"Internal addressing starts with 1, not 0."
+	address + 1.
+	
+	^ address.! !
+
 !CWMars methodsFor: 'accessing' stamp: 'as 4/17/2007 11:53'!
 programs
 
 	^ programs ifNil: [ programs _ OrderedCollection new. ].! !
+
+!CWMars methodsFor: 'public' stamp: 'as 4/17/2007 15:47'!
+read: integerAddress
+
+	"Read value from the specified address."
+	
+	| address value |
+	address _ self internalAddress: integerAddress.
+	value _ (self core at: address) ifNil: [ self core at: address put: self initialCoreValue. ].
+	^ value.! !
 
 !CWMars methodsFor: 'accessing' stamp: 'as 4/17/2007 11:54'!
 size
@@ -72,50 +110,41 @@ size: anInteger
 
 	size _ anInteger.! !
 
-Object subclass: #CWProgram
-	instanceVariableNames: 'lines'
-	classVariableNames: ''
-	poolDictionaries: ''
-	category: 'CoreWar'!
+!CWMars methodsFor: 'public' stamp: 'as 4/17/2007 15:50'!
+write: anInteger at: integerAddress
 
-!CWProgram commentStamp: 'as 4/16/2007 11:51' prior: 0!
-A Core War program.!
-
-!CWProgram class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:49'!
-fromString: aString
-
-	"Initialize the program from source code (parse/compile)."
-
-	self subclassResponsibility.! !
-
-!CWProgram methodsFor: 'public' stamp: 'as 4/17/2007 11:41'!
-addLine: aCWProgramInstruction
-
-	self lines add: aCWProgramInstruction.! !
-
-!CWProgram methodsFor: 'converting' stamp: 'as 4/17/2007 12:54'!
-asString
-
-	"Return the source code of the program."
+	"Write value at the specified address."
 	
-	self subclassResponsibility.! !
+	self core at: (self internalAddress: integerAddress) put: anInteger.
+	^ anInteger.! !
 
-!CWProgram methodsFor: 'accessing' stamp: 'as 4/17/2007 11:52'!
-lines
-
-	^ lines ifNil: [ lines _ OrderedCollection new. ].! !
-
-CWProgram subclass: #CWRedcode
-	instanceVariableNames: ''
+Object subclass: #CWRedcode
+	instanceVariableNames: 'lines'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcode commentStamp: 'as 4/17/2007 01:11' prior: 0!
-A Core War program in Redcode language.!
+!CWRedcode commentStamp: 'as 4/17/2007 17:48' prior: 0!
+A Core War program in Redcode language.
+This is a object representation of a Redcode program. It can either be build from source code (string) or binary code (integers).!
 
-!CWRedcode class methodsFor: 'instance creation' stamp: 'as 4/17/2007 13:15'!
+!CWRedcode class methodsFor: 'instance creation' stamp: 'as 4/17/2007 19:38'!
+fromIntegers: aCollection
+
+	"Initialize the program from binary (integers) code (disassembling)."
+
+	| program |
+	program _ self new.
+	aCollection do: [
+		:integer |
+		program addLine: (CWRedcodeInstruction fromInteger: integer).
+	].
+	^ program.! !
+
+!CWRedcode class methodsFor: 'instance creation' stamp: 'as 4/17/2007 19:36'!
 fromString: aString
+
+	"Initialize the program from source code (assembling)."
 
 	| program source |
 	program _ self new.
@@ -126,42 +155,43 @@ fromString: aString
 	].
 	^ program.! !
 
-!CWRedcode methodsFor: 'converting' stamp: 'as 4/17/2007 12:55'!
+!CWRedcode methodsFor: 'public' stamp: 'as 4/17/2007 18:06'!
+addLine: aCWRedcodeInstruction
+
+	self lines add: aCWRedcodeInstruction.! !
+
+!CWRedcode methodsFor: 'converting' stamp: 'as 4/17/2007 19:33'!
+asIntegers
+
+	| array |
+	array _ OrderedCollection new.
+	self lines doWithIndex: [
+		:line :index |
+		array add: line asInteger.
+	].
+	^ array.! !
+
+!CWRedcode methodsFor: 'converting' stamp: 'as 4/17/2007 15:54'!
 asString
+
+	"Return the source code of the program."
 
 	self notYetImplemented.! !
 
-Object subclass: #CWProgramInstruction
-	instanceVariableNames: ''
-	classVariableNames: ''
-	poolDictionaries: ''
-	category: 'CoreWar'!
+!CWRedcode methodsFor: 'accessing' stamp: 'as 4/17/2007 15:52'!
+lines
 
-!CWProgramInstruction commentStamp: 'as 4/17/2007 11:43' prior: 0!
-A single instruction of a program. The string representation is usually one line in the form of "<instruction> <operand> ...".!
+	^ lines ifNil: [ lines _ OrderedCollection new. ].! !
 
-!CWProgramInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 11:46'!
-asInteger
-
-	"Return an integer encoding of this instruction."
-	
-	self subclassResponsibility.! !
-
-!CWProgramInstruction methodsFor: 'executing' stamp: 'as 4/17/2007 11:45'!
-executeOn: aCWMars
-
-	"Execute the instruction on the MARS simulator."
-	
-	self subclassResponsibility.! !
-
-CWProgramInstruction subclass: #CWRedcodeInstruction
+Object subclass: #CWRedcodeInstruction
 	instanceVariableNames: 'operand1 operand2'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeInstruction commentStamp: 'as 4/17/2007 11:44' prior: 0!
-A Redcode command in the form of "<instruction> <operand1> [<operand2>]".!
+!CWRedcodeInstruction commentStamp: 'as 4/17/2007 17:47' prior: 0!
+A command in the form of "<instruction> <operand1> [<operand2>]".
+New subclasses must be registered in self>>allInstructions to be recognized during build from source or binary code.!
 
 CWRedcodeInstruction subclass: #CWRedcodeAddInstruction
 	instanceVariableNames: ''
@@ -208,8 +238,8 @@ CWRedcodeInstruction subclass: #CWRedcodeDataInstruction
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeDataInstruction commentStamp: 'as 4/17/2007 08:17' prior: 0!
-DAT B - Initialize location to value B.!
+!CWRedcodeDataInstruction commentStamp: 'as 4/17/2007 18:35' prior: 0!
+DAT A B - Initialize location to value B.!
 
 !CWRedcodeDataInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:28'!
 encoding
@@ -291,22 +321,28 @@ symbol
 
 	self subclassResponsibility.! !
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 12:51'!
+!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 17:05'!
 tokensFor: aString
 
 	| tokens stream |
 	tokens _ OrderedCollection new.
-	"Append a space, each token must be terminated with a space."
 	stream _ ReadStream on: aString, ' '.
 	3 timesRepeat: [
 		tokens add: (stream nextDelimited: ' ' asCharacter).
 	].
 	^ tokens.! !
 
-!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/16/2007 17:07'!
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 17:27'!
+allInstructions
+
+	^ self class allInstructions.! !
+
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 18:19'!
 asInteger
 
-	self notYetImplemented.! !
+	^ self encoding +
+		operand1 asInteger * self operand1Radix +
+		operand2 asInteger * self operand2Radix.! !
 
 !CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 11:25'!
 encoding
@@ -325,10 +361,20 @@ operand1: aCWRedcodeOperand
 
 	operand1 _ aCWRedcodeOperand.! !
 
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 18:49'!
+operand1Radix
+
+	^ (self allInstructions size log: 2) rounded.! !
+
 !CWRedcodeInstruction methodsFor: 'accessing' stamp: 'as 4/16/2007 16:10'!
 operand2: aCWRedcodeOperand
 
 	operand2 _ aCWRedcodeOperand.! !
+
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 18:19'!
+operand2Radix
+
+	^ self operand1Radix * operand1 radix.! !
 
 CWRedcodeInstruction subclass: #CWRedcodeJumpInstruction
 	instanceVariableNames: ''
@@ -336,8 +382,8 @@ CWRedcodeInstruction subclass: #CWRedcodeJumpInstruction
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeJumpInstruction commentStamp: 'as 4/17/2007 08:34' prior: 0!
-JMP B - Jump to location B.!
+!CWRedcodeJumpInstruction commentStamp: 'as 4/17/2007 18:35' prior: 0!
+JMP A B - Jump to location B.!
 
 !CWRedcodeJumpInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:29'!
 encoding
@@ -407,13 +453,14 @@ symbol
 	^ #SUB.! !
 
 Object subclass: #CWRedcodeOperand
-	instanceVariableNames: 'value'
+	instanceVariableNames: 'value max'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeOperand commentStamp: 'as 4/16/2007 16:32' prior: 0!
-An operand of a Redcode instruction.!
+!CWRedcodeOperand commentStamp: 'as 4/17/2007 17:46' prior: 0!
+An operand of a Redcode instruction.
+New operands must be registered in self>>allOperands to be recognized during build from source or binary code.!
 
 CWRedcodeOperand subclass: #CWRedcodeImmediateOperand
 	instanceVariableNames: ''
@@ -489,6 +536,13 @@ fromString: aString
 	].
 	CWRedcodeSyntaxException signal: '"', aString, '" is not a valid operand'.! !
 
+!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/17/2007 18:26'!
+fromString: aString max: anInteger
+
+	^ (self fromString: aString)
+		max: anInteger;
+		yourself.! !
+
 !CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 21:13'!
 startCharacters
 
@@ -497,6 +551,22 @@ startCharacters
 
 	self subclassResponsibility.! !
 
+!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/17/2007 19:27'!
+allOperands
+
+	^ self class allOperands.! !
+
+!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/17/2007 18:20'!
+asInteger
+
+	^ self encoding +
+		value * self valueRadix.! !
+
+!CWRedcodeOperand methodsFor: 'defaults' stamp: 'as 4/17/2007 18:25'!
+defaultMax
+
+	^ 2 raisedTo: 64.! !
+
 !CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/17/2007 08:16'!
 encoding
 
@@ -504,15 +574,36 @@ encoding
 
 	^ self subclassResponsibility.! !
 
+!CWRedcodeOperand methodsFor: 'accessing' stamp: 'as 4/17/2007 18:22'!
+max
+
+	^ max ifNil: [ max _ self defaultMax. ].! !
+
+!CWRedcodeOperand methodsFor: 'accessing' stamp: 'as 4/17/2007 18:33'!
+max: anInteger
+
+	max _ anInteger.
+	value ifNotNil: [ self value: value. ].! !
+
+!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/17/2007 19:26'!
+radix
+
+	^ self valueRadix * (2 raisedTo: (self max log: 2) ceiling).! !
+
 !CWRedcodeOperand methodsFor: 'accessing' stamp: 'as 4/16/2007 17:07'!
 value
 
 	^ value.! !
 
-!CWRedcodeOperand methodsFor: 'accessing' stamp: 'as 4/16/2007 17:07'!
+!CWRedcodeOperand methodsFor: 'accessing' stamp: 'as 4/17/2007 18:24'!
 value: anInteger
 
-	value _ anInteger.! !
+	value _ anInteger \\ self max.! !
+
+!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/17/2007 19:24'!
+valueRadix
+
+	^ 2 raisedTo: (self allOperands size log: 2) ceiling.! !
 
 CWRedcodeOperand subclass: #CWRedcodeRelativeOperand
 	instanceVariableNames: ''
@@ -520,8 +611,8 @@ CWRedcodeOperand subclass: #CWRedcodeRelativeOperand
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeRelativeOperand commentStamp: 'as 4/17/2007 01:29' prior: 0!
-String representation: <number>. The operand is the value at the address build from the program counter plus the offset <number>.!
+!CWRedcodeRelativeOperand commentStamp: 'as 4/17/2007 18:37' prior: 0!
+String representation: <number>. The operand is the value at the address that is build from the value of the location plus the offset <number>.!
 
 !CWRedcodeRelativeOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 23:06'!
 fromString: aString
