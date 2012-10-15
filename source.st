@@ -41,6 +41,19 @@ testCoreSize
 	
 	self assert: (CWMars new coreSize: 1024; yourself) coreSize = 1024.! !
 
+!CWMarsTest methodsFor: 'testing' stamp: 'as 4/27/2007 10:23'!
+testDefaults
+	
+	self assert: mars coreSize notNil.
+	self assert: mars rounds notNil.
+	self assert: mars stepDelay notNil.! !
+
+!CWMarsTest methodsFor: 'testing' stamp: 'as 4/27/2007 10:20'!
+testMaxValue
+	
+	"Otherwise not all encoded instructions can't be stored in the core."
+	self assert: CWMars maxValue >= (2 raisedTo: CWRedcodeInstruction encodingBits).! !
+
 TestCase subclass: #CWRedcodeInstructionTest
 	instanceVariableNames: ''
 	classVariableNames: ''
@@ -218,10 +231,10 @@ maxValue
 
 	^ self valueSize / 2.! !
 
-!CWMars class methodsFor: 'core' stamp: 'as 4/26/2007 21:20'!
+!CWMars class methodsFor: 'core' stamp: 'as 4/27/2007 10:34'!
 minValue
 
-	^ self maxValue negative + 1.! !
+	^ self maxValue negated + 1.! !
 
 !CWMars class methodsFor: 'limits' stamp: 'as 4/26/2007 21:19'!
 valueBits
@@ -274,10 +287,10 @@ defaultSize
 
 	^ 1024.! !
 
-!CWMars methodsFor: 'defaults' stamp: 'as 4/20/2007 13:10'!
+!CWMars methodsFor: 'defaults' stamp: 'as 4/27/2007 10:41'!
 defaultStepDelay
 
-	^ 100.! !
+	^ 1.! !
 
 !CWMars methodsFor: 'private' stamp: 'as 4/26/2007 18:59'!
 freeCoreRange: anInteger
@@ -418,7 +431,7 @@ rounds: anInteger
 
 	rounds _ anInteger.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/26/2007 19:02'!
+!CWMars methodsFor: 'public' stamp: 'as 4/27/2007 10:34'!
 run
 
 	| players instruction counter |
@@ -429,6 +442,7 @@ run
 		loadPrograms.
 	players _ programs copy.
 	1 to: self rounds do: [
+		:round |
 		players do: [
 			:player |
 			pc _ counters at: player.
@@ -486,7 +500,7 @@ write: valueInteger at: integerAddress for: aCWRedcode
 	^ value.! !
 
 Object subclass: #CWRedcode
-	instanceVariableNames: 'lines'
+	instanceVariableNames: 'lines name'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
@@ -549,6 +563,11 @@ binarySource
 	].
 	^ string.! !
 
+!CWRedcode methodsFor: 'defaults' stamp: 'as 4/27/2007 10:53'!
+defaultName
+
+	^ 'Noname'.! !
+
 !CWRedcode methodsFor: 'converting' stamp: 'as 4/18/2007 23:29'!
 encoded
 
@@ -564,6 +583,22 @@ encoded
 lines
 
 	^ lines ifNil: [ lines _ OrderedCollection new. ].! !
+
+!CWRedcode methodsFor: 'accessing' stamp: 'as 4/27/2007 10:54'!
+name
+
+	^ name ifNil: [ name _ self defaultName. ].! !
+
+!CWRedcode methodsFor: 'accessing' stamp: 'as 4/27/2007 10:52'!
+name: aString
+
+	name _ aString.! !
+
+!CWRedcode methodsFor: 'printing' stamp: 'as 4/27/2007 10:58'!
+printOn: aStream
+
+	super printOn: aStream.
+	aStream nextPutAll: ' (', self name, ')'.! !
 
 !CWRedcode methodsFor: 'public' stamp: 'as 4/20/2007 14:02'!
 size
@@ -615,13 +650,13 @@ symbol
 
 	^ #ADD.! !
 
-!CWRedcodeAddInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:23'!
+!CWRedcodeAddInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:49'!
 executeOn: mars for: redcode
 
 	| value |
 	value _ (operand1 valueOn: mars) + (operand2 valueOn: mars).
 	mars write: value at: (operand2 locationOn: mars) for: redcode.
-	super executeOn: mars for: redcode.! !
+	^ super executeOn: mars for: redcode.! !
 
 CWRedcodeInstruction subclass: #CWRedcodeCompareInstruction
 	instanceVariableNames: ''
@@ -643,11 +678,11 @@ symbol
 
 	^ #CMP.! !
 
-!CWRedcodeCompareInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:26'!
+!CWRedcodeCompareInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:50'!
 executeOn: mars for: redcode
 
 	(operand1 valueOn: mars) = (operand2 valueOn: mars) ifTrue: [
-		super executeOn: mars for: redcode.
+		^ super executeOn: mars for: redcode.
 	] ifFalse: [
 		^ mars pc + 2.
 	].! !
@@ -681,11 +716,11 @@ symbol
 
 	^ #DAT.! !
 
-!CWRedcodeDataInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:27'!
+!CWRedcodeDataInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:50'!
 executeOn: mars for: redcode
 
 	mars write: (operand1 valueOn: mars) at: mars pc for: redcode.
-	super executeOn: mars for: redcode.! !
+	^ super executeOn: mars for: redcode.! !
 
 CWRedcodeInstruction subclass: #CWRedcodeDecrementJumpZeroInstruction
 	instanceVariableNames: ''
@@ -711,13 +746,13 @@ symbol
 
 	^ #DJZ.! !
 
-!CWRedcodeDecrementJumpZeroInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:50'!
+!CWRedcodeDecrementJumpZeroInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:50'!
 executeOn: mars for: redcode
 
 	((operand1 valueOn: mars) - 1) = 0 ifTrue: [
 		^ operand2 locationOn: mars.
 	] ifFalse: [
-		super executeOn: mars for: redcode.
+		^ super executeOn: mars for: redcode.
 	].
 	! !
 
@@ -1020,13 +1055,13 @@ symbol
 
 	^ #JMZ.! !
 
-!CWRedcodeJumpZeroInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:40'!
+!CWRedcodeJumpZeroInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:51'!
 executeOn: mars for: redcode
 
 	(operand1 valueOn: mars) = 0 ifTrue: [
 		^ operand2 locationOn: mars.
 	] ifFalse: [
-		super executeOn: mars for: redcode.
+		^ super executeOn: mars for: redcode.
 	].! !
 
 CWRedcodeInstruction subclass: #CWRedcodeMoveInstruction
@@ -1053,11 +1088,11 @@ symbol
 
 	^ #MOV.! !
 
-!CWRedcodeMoveInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:43'!
+!CWRedcodeMoveInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:36'!
 executeOn: mars for: redcode
 
 	mars write: (operand1 valueOn: mars) at: (operand2 locationOn: mars) for: redcode.
-	super executeOn: mars for: redcode.! !
+	^ super executeOn: mars for: redcode.! !
 
 CWRedcodeInstruction subclass: #CWRedcodeSubtractInstruction
 	instanceVariableNames: ''
@@ -1083,13 +1118,13 @@ symbol
 
 	^ #SUB.! !
 
-!CWRedcodeSubtractInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:48'!
+!CWRedcodeSubtractInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:51'!
 executeOn: mars for: redcode
 
 	| value |
 	value _ (operand2 valueOn: mars) - (operand1 valueOn: mars).
 	mars write: value at: (operand2 locationOn: mars) for: redcode.
-	super executeOn: mars for: redcode.! !
+	^ super executeOn: mars for: redcode.! !
 
 Object subclass: #CWRedcodeOperand
 	instanceVariableNames: 'value'
