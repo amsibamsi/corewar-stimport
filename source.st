@@ -36,10 +36,10 @@ setUp
 
 	mars _ CWMars new.! !
 
-!CWMarsTest methodsFor: 'testing' stamp: 'as 4/19/2007 17:13'!
+!CWMarsTest methodsFor: 'testing' stamp: 'as 4/26/2007 11:09'!
 testCoreSize
 	
-	self assert: (CWMars withCoreSize: 1024) coreSize = 1024.! !
+	self assert: (CWMars new coreSize: 1024; yourself) coreSize = 1024.! !
 
 TestCase subclass: #CWRedcodeInstructionTest
 	instanceVariableNames: ''
@@ -205,7 +205,7 @@ testWhitespace
 	self assert: redcode source = ('ADD 1 2', String cr, 'SUB #3 @-5').! !
 
 Object subclass: #CWMars
-	instanceVariableNames: 'core programs pc counters size'
+	instanceVariableNames: 'core ownerships programs pc counters size stepDelay rounds'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
@@ -233,41 +233,68 @@ valueSize
 
 	^ 2 raisedTo: self valueBits.! !
 
-!CWMars class methodsFor: 'instance creation' stamp: 'as 4/16/2007 11:52'!
-withCoreSize: anInteger
-
-	^ self new
-		size: anInteger;
-		yourself.! !
-
 !CWMars methodsFor: 'public' stamp: 'as 4/17/2007 15:52'!
 addProgram: aCWRedcode
 
 	self programs add: aCWRedcode.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/19/2007 17:19'!
-core
-
-	^ core ifNil: [ core _ Array new: self size. ].! !
-
-!CWMars methodsFor: 'accessing' stamp: 'as 4/16/2007 11:28'!
+!CWMars methodsFor: 'accessing' stamp: 'as 4/26/2007 11:57'!
 coreSize
 
-	^ self core size.! !
+	^ self size.! !
 
-!CWMars methodsFor: 'defaults' stamp: 'as 4/15/2007 21:19'!
+!CWMars methodsFor: 'public' stamp: 'as 4/20/2007 13:26'!
+coreSize: anInteger
+
+	size _ anInteger.! !
+
+!CWMars methodsFor: 'defaults' stamp: 'as 4/20/2007 13:09'!
+defaultRounds
+
+	^ 1000.! !
+
+!CWMars methodsFor: 'defaults' stamp: 'as 4/26/2007 11:03'!
 defaultSize
 
-	^ 4096.! !
+	^ 1024.! !
 
-!CWMars methodsFor: 'defaults' stamp: 'as 4/18/2007 17:09'!
-defaultValue
+!CWMars methodsFor: 'defaults' stamp: 'as 4/20/2007 13:10'!
+defaultStepDelay
 
-	"The initial value at any address in the core."
-	
-	^ 0.! !
+	^ 100.! !
 
-!CWMars methodsFor: 'core' stamp: 'as 4/18/2007 23:09'!
+!CWMars methodsFor: 'private' stamp: 'as 4/20/2007 14:21'!
+freeCoreRange: anInteger
+
+	"| start free address |
+	start _ self core atRandom.
+	1 to: self coreSize do: [
+		:count |
+		free _ true.
+		0 to: anInteger do: ["
+			! !
+
+!CWMars methodsFor: 'initialize-release' stamp: 'as 4/26/2007 10:53'!
+initializeCore
+
+	core _ Array new: self size.
+	core withIndexDo: [
+		:value :index |
+		core at: index put: self randomValue.
+	].
+	^ core.! !
+
+!CWMars methodsFor: 'initialize-release' stamp: 'as 4/26/2007 11:58'!
+initializeCounters
+
+	^ counters _ Dictionary new.! !
+
+!CWMars methodsFor: 'initialize-release' stamp: 'as 4/20/2007 17:10'!
+initializeOwnerships
+
+	^ ownerships _ Array new: self size.! !
+
+!CWMars methodsFor: 'private' stamp: 'as 4/18/2007 23:09'!
 internalAddress: anInteger
 
 	"Internally the core is an array with indices from 1 to <size>.
@@ -288,7 +315,7 @@ internalAddress: anInteger
 	
 	^ address.! !
 
-!CWMars methodsFor: 'core' stamp: 'as 4/18/2007 23:12'!
+!CWMars methodsFor: 'private' stamp: 'as 4/18/2007 23:12'!
 internalValue: anInteger
 
 	| value |
@@ -303,6 +330,27 @@ internalValue: anInteger
 	].
 	^ value.! !
 
+!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 11:15'!
+loadProgram: aCWRedcode
+
+	| start |
+	start _ self freeCoreRange: aCWRedcode size.
+	start ifNil: [ CWMarsException signal: 'No free space to load program'. ].
+	aCWRedcode lines withIndexDo: [
+		:line :index |
+		self write: line encoded at: start + index - 1 for: aCWRedcode.
+	].
+	^ start.! !
+
+!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 12:02'!
+loadPrograms
+
+	self programs do: [
+		:program |
+		counters at: program put: (self loadProgram: program).
+	].
+	pc _ counters at: programs first.! !
+
 !CWMars methodsFor: 'core' stamp: 'as 4/18/2007 23:09'!
 maxValue
 
@@ -313,20 +361,81 @@ minValue
 
 	^ self class minValue.! !
 
+!CWMars methodsFor: 'core' stamp: 'as 4/26/2007 12:01'!
+owner: integerAddress
+
+	^ ownerships at: (self internalAddress: integerAddress).! !
+
+!CWMars methodsFor: 'core' stamp: 'as 4/26/2007 12:01'!
+owner: aCWRedcode at: integerAddress
+
+	^ ownerships at: (self internalAddress: integerAddress) put: aCWRedcode.! !
+
+!CWMars methodsFor: 'accessing' stamp: 'as 4/20/2007 13:32'!
+pc
+
+	^ pc.! !
+
 !CWMars methodsFor: 'accessing' stamp: 'as 4/17/2007 11:53'!
 programs
 
 	^ programs ifNil: [ programs _ OrderedCollection new. ].! !
 
-!CWMars methodsFor: 'core' stamp: 'as 4/18/2007 17:09'!
+!CWMars methodsFor: 'initialize-release' stamp: 'as 4/26/2007 10:52'!
+randomValue
+
+	^ (self maxValue + 1) atRandom - 1.! !
+
+!CWMars methodsFor: 'core' stamp: 'as 4/26/2007 11:57'!
 read: integerAddress
 
 	"Read value from the specified address."
 	
 	| address value |
 	address _ self internalAddress: integerAddress.
-	value _ (self core at: address) ifNil: [ self core at: address put: self defaultValue. ].
+	value _ (core at: address).
 	^ value.! !
+
+!CWMars methodsFor: 'accessing' stamp: 'as 4/20/2007 13:09'!
+rounds
+
+	^ rounds ifNil: [ rounds _ self defaultRounds. ].! !
+
+!CWMars methodsFor: 'public' stamp: 'as 4/20/2007 13:26'!
+rounds: anInteger
+
+	rounds _ anInteger.! !
+
+!CWMars methodsFor: 'public' stamp: 'as 4/26/2007 14:05'!
+run
+
+	| players instruction counter |
+	self
+		initializeCore;
+		initializeOwnerships;
+		initializeCounters;
+		loadPrograms.
+	players _ programs copy.
+	1 to: self rounds do: [
+		players do: [
+			:player |
+			pc _ counters at: player.
+			[
+				instruction _ CWRedcodeInstruction encoded: (self read: pc).
+				ownerships at: pc put: player.
+				counter _ instruction executeOn: self for: player.
+				counter _ self internalAddress: counter.
+				counters at: player put: counter.
+			]
+				on: CWRedcodeDecodeException
+				do: [
+					players remove: player.
+					players size = 1 ifTrue: [ ^ players. ].
+				].
+		].
+		(Delay forMilliseconds: self stepDelay) wait.
+	].
+	^ players.! !
 
 !CWMars methodsFor: 'private' stamp: 'as 4/19/2007 17:15'!
 size
@@ -338,13 +447,24 @@ size: anInteger
 
 	size _ anInteger.! !
 
-!CWMars methodsFor: 'core' stamp: 'as 4/18/2007 17:12'!
-write: anInteger at: integerAddress
+!CWMars methodsFor: 'accessing' stamp: 'as 4/20/2007 13:08'!
+stepDelay
+
+	^ stepDelay ifNil: [ stepDelay _ self defaultStepDelay. ].! !
+
+!CWMars methodsFor: 'public' stamp: 'as 4/20/2007 13:26'!
+stepDelay: anInteger
+
+	stepDelay _ anInteger.! !
+
+!CWMars methodsFor: 'core' stamp: 'as 4/26/2007 11:57'!
+write: valueInteger at: integerAddress for: aCWRedcode
 
 	"Write value at the specified address."
 	
-	self core at: (self internalAddress: integerAddress) put: (self internalValue: anInteger).
-	^ anInteger.! !
+	core at: (self internalAddress: integerAddress) put: (self internalValue: valueInteger).
+	self owner: aCWRedcode at: integerAddress.
+	^ self internalValue: valueInteger.! !
 
 Object subclass: #CWRedcode
 	instanceVariableNames: 'lines'
@@ -426,6 +546,11 @@ lines
 
 	^ lines ifNil: [ lines _ OrderedCollection new. ].! !
 
+!CWRedcode methodsFor: 'public' stamp: 'as 4/20/2007 14:02'!
+size
+
+	^ self lines size.! !
+
 !CWRedcode methodsFor: 'converting' stamp: 'as 4/20/2007 11:48'!
 source
 
@@ -471,6 +596,14 @@ symbol
 
 	^ #ADD.! !
 
+!CWRedcodeAddInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:23'!
+executeOn: mars for: redcode
+
+	| value |
+	value _ (operand1 valueOn: mars) + (operand2 valueOn: mars).
+	mars write: value at: (operand2 locationOn: mars) for: redcode.
+	super executeOn: mars for: redcode.! !
+
 CWRedcodeInstruction subclass: #CWRedcodeCompareInstruction
 	instanceVariableNames: ''
 	classVariableNames: ''
@@ -490,6 +623,15 @@ encoding
 symbol
 
 	^ #CMP.! !
+
+!CWRedcodeCompareInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:26'!
+executeOn: mars for: redcode
+
+	(operand1 valueOn: mars) = (operand2 valueOn: mars) ifTrue: [
+		super executeOn: mars for: redcode.
+	] ifFalse: [
+		^ mars pc + 2.
+	].! !
 
 CWRedcodeInstruction subclass: #CWRedcodeDataInstruction
 	instanceVariableNames: ''
@@ -520,6 +662,12 @@ symbol
 
 	^ #DAT.! !
 
+!CWRedcodeDataInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:27'!
+executeOn: mars for: redcode
+
+	mars write: (operand1 valueOn: mars) at: mars pc for: redcode.
+	super executeOn: mars for: redcode.! !
+
 CWRedcodeInstruction subclass: #CWRedcodeDecrementJumpZeroInstruction
 	instanceVariableNames: ''
 	classVariableNames: ''
@@ -543,6 +691,16 @@ operand2Types
 symbol
 
 	^ #DJZ.! !
+
+!CWRedcodeDecrementJumpZeroInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:50'!
+executeOn: mars for: redcode
+
+	((operand1 valueOn: mars) - 1) = 0 ifTrue: [
+		^ operand2 locationOn: mars.
+	] ifFalse: [
+		super executeOn: mars for: redcode.
+	].
+	! !
 
 !CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:22'!
 allInstructions
@@ -619,24 +777,24 @@ operand1BitShift
 
 	^ self typeEncodingBits.! !
 
-!CWRedcodeInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 15:22'!
+!CWRedcodeInstruction class methodsFor: 'private' stamp: 'as 4/26/2007 14:59'!
 operand1Types
 
 	"Allowed operand types for operand 1."
 
-	^ CWRedcodeOperand allOperands.! !
+	^ CWRedcodeOperand normalOperands.! !
 
 !CWRedcodeInstruction class methodsFor: 'converting' stamp: 'as 4/19/2007 13:11'!
 operand2BitShift
 
 	^ self operand1BitShift + CWRedcodeOperand encodingBits.! !
 
-!CWRedcodeInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 15:22'!
+!CWRedcodeInstruction class methodsFor: 'private' stamp: 'as 4/26/2007 14:59'!
 operand2Types
 
 	"Allowed operand types of operand 2."
 
-	^ CWRedcodeOperand allOperands.! !
+	^ CWRedcodeOperand normalOperands.! !
 
 !CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/20/2007 11:53'!
 source: aString
@@ -706,12 +864,13 @@ encodingBits
 
 	^ self class encodingBits.! !
 
-!CWRedcodeInstruction methodsFor: 'executing' stamp: 'as 4/17/2007 11:33'!
-executeOn: aCWMars
+!CWRedcodeInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 13:23'!
+executeOn: aCWMars for: aCWRedcode
 
-	"Execute the instruction on the MARS simulator."
+	"Execute the instruction on the MARS simulator.
+	 Return the address for the next instruction."
 	
-	self subclassResponsibility.! !
+	^ aCWMars pc + 1.! !
 
 !CWRedcodeInstruction methodsFor: 'testing' stamp: 'as 4/18/2007 10:16'!
 hasSecondOperand
@@ -813,6 +972,11 @@ symbol
 
 	^ #JMP.! !
 
+!CWRedcodeJumpInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:38'!
+executeOn: mars for: redcode
+
+	^ operand1 locationOn: mars.! !
+
 CWRedcodeInstruction subclass: #CWRedcodeJumpZeroInstruction
 	instanceVariableNames: ''
 	classVariableNames: ''
@@ -836,6 +1000,15 @@ operand2Types
 symbol
 
 	^ #JMZ.! !
+
+!CWRedcodeJumpZeroInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:40'!
+executeOn: mars for: redcode
+
+	(operand1 valueOn: mars) = 0 ifTrue: [
+		^ operand2 locationOn: mars.
+	] ifFalse: [
+		super executeOn: mars for: redcode.
+	].! !
 
 CWRedcodeInstruction subclass: #CWRedcodeMoveInstruction
 	instanceVariableNames: ''
@@ -861,6 +1034,12 @@ symbol
 
 	^ #MOV.! !
 
+!CWRedcodeMoveInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:43'!
+executeOn: mars for: redcode
+
+	mars write: (operand1 valueOn: mars) at: (operand2 locationOn: mars) for: redcode.
+	super executeOn: mars for: redcode.! !
+
 CWRedcodeInstruction subclass: #CWRedcodeSubtractInstruction
 	instanceVariableNames: ''
 	classVariableNames: ''
@@ -884,6 +1063,14 @@ operand2Types
 symbol
 
 	^ #SUB.! !
+
+!CWRedcodeSubtractInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:48'!
+executeOn: mars for: redcode
+
+	| value |
+	value _ (operand2 valueOn: mars) - (operand1 valueOn: mars).
+	mars write: value at: (operand2 locationOn: mars) for: redcode.
+	super executeOn: mars for: redcode.! !
 
 Object subclass: #CWRedcodeOperand
 	instanceVariableNames: 'value'
@@ -934,10 +1121,20 @@ initialize
 
 	value _ 0.! !
 
+!CWRedcodeEmptyOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:30'!
+locationOn: mars
+
+	self shouldNotImplement.! !
+
 !CWRedcodeEmptyOperand methodsFor: 'converting' stamp: 'as 4/19/2007 17:12'!
 source
 
 	^ ''.! !
+
+!CWRedcodeEmptyOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:30'!
+valueOn: mars
+
+	self shouldNotImplement.! !
 
 CWRedcodeOperand subclass: #CWRedcodeImmediateOperand
 	instanceVariableNames: ''
@@ -972,6 +1169,16 @@ symbol
 
 	^ #'#'.! !
 
+!CWRedcodeImmediateOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:31'!
+locationOn: mars
+
+	self shouldNotImplement.! !
+
+!CWRedcodeImmediateOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:31'!
+valueOn: mars
+
+	^ value.! !
+
 CWRedcodeOperand subclass: #CWRedcodeIndirectOperand
 	instanceVariableNames: ''
 	classVariableNames: ''
@@ -1004,6 +1211,16 @@ source: aString
 symbol
 
 	^ #@.! !
+
+!CWRedcodeIndirectOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:31'!
+locationOn: mars
+
+	^ mars read: mars pc + value.! !
+
+!CWRedcodeIndirectOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:30'!
+valueOn: mars
+
+	^ mars read: (self locationOn: mars).! !
 
 !CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/18/2007 10:20'!
 allOperands
@@ -1054,10 +1271,13 @@ min
 
 	^ self max negated - 1.! !
 
-!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/19/2007 15:32'!
-relativeOperands
+!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/26/2007 14:59'!
+normalOperands
+	
+	^ self allOperands remove: CWRedcodeEmptyOperand; yourself.! !
 
-	"A set of operands allowed in this language."
+!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/26/2007 14:58'!
+relativeOperands
 	
 	^ self allOperands remove: CWRedcodeImmediateOperand; yourself.! !
 
@@ -1125,6 +1345,14 @@ encodingBits
 
 	^ self class encodingBits.! !
 
+!CWRedcodeOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:05'!
+locationOn: aCWMars
+
+	"Return the final location of the operand, interpreting
+	 all relative, indirect or other addresses."
+
+	self subclassResponsibility.! !
+
 !CWRedcodeOperand methodsFor: 'settings' stamp: 'as 4/18/2007 13:01'!
 max
 
@@ -1178,6 +1406,14 @@ value: anInteger
 		].
 	].! !
 
+!CWRedcodeOperand methodsFor: 'executing' stamp: 'as 4/26/2007 13:33'!
+valueOn: aCWMars
+
+	"Return the final value of the operand, interpreting
+	 all relative, indirect or other addresses."
+
+	self subclassResponsibility.! !
+
 CWRedcodeOperand subclass: #CWRedcodeRelativeOperand
 	instanceVariableNames: ''
 	classVariableNames: ''
@@ -1210,6 +1446,25 @@ source: aString
 symbol
 
 	^ #''.! !
+
+!CWRedcodeRelativeOperand methodsFor: 'accessing' stamp: 'as 4/26/2007 14:30'!
+locationOn: mars
+
+	^ mars pc + value.! !
+
+!CWRedcodeRelativeOperand methodsFor: 'accessing' stamp: 'as 4/26/2007 14:30'!
+valueOn: mars
+
+	^ mars read: (self locationOn: mars).! !
+
+Error subclass: #CWMarsException
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar'!
+
+!CWMarsException commentStamp: 'as 4/26/2007 11:08' prior: 0!
+MARS interpreter error.!
 
 Error subclass: #CWRedcodeException
 	instanceVariableNames: ''
