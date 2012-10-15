@@ -105,10 +105,10 @@ neutralColor
 
 	^ Color gray lighter.! !
 
-!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/24/2007 19:57'!
+!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/26/2007 15:39'!
 update: aSymbol
 
-	aSymbol = #core ifTrue: [].! !
+	aSymbol = #core ifTrue: [ self changed. ].! !
 
 Object subclass: #CWCoreWar
 	instanceVariableNames: 'mars window programs customPrograms players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize logText playerColors simulation'
@@ -755,22 +755,20 @@ removePlayerColor: aColor
 	value _ playerColors at: aColor.
 	playerColors at: aColor put: value - 1.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/24/2007 18:22'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/26/2007 15:45'!
 runPause
 
 	simulation ifNil: [
 		mars
 			setPlayers: players;
 			coreSize: coreSize.
-		simulation _ [ mars run. simulation _ nil. ] newProcess.
+		simulation _ [ self simulate. ] newProcess.
 		simulation resume.
 	] ifNotNil: [
 		simulation isSuspended ifTrue: [
 			simulation resume.
 		] ifFalse: [
-			simulation isRunning ifTrue: [
-				simulation suspend.
-			].
+			simulation suspend.
 		].
 	].! !
 
@@ -808,6 +806,12 @@ selectedPlayerIndex
 selectedProgramIndex
 
 	^ selectedProgramIndex.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/26/2007 15:44'!
+simulate
+
+	mars run.
+	simulation _ nil.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
 unselectCustomProgram
@@ -904,10 +908,10 @@ defaultSize
 
 	^ 100.! !
 
-!CWMars methodsFor: 'defaults' stamp: 'as 8/23/2007 15:04'!
+!CWMars methodsFor: 'defaults' stamp: 'as 8/26/2007 15:51'!
 defaultStepDelay
 
-	^ 0.! !
+	^ 100.! !
 
 !CWMars methodsFor: 'private' stamp: 'as 7/27/2007 14:45'!
 freeCoreRange: anInteger
@@ -977,24 +981,25 @@ internalValue: anInteger
 
 ! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 18:52'!
-loadProgram: aCWRedcode
+!CWMars methodsFor: 'private' stamp: 'as 8/26/2007 16:07'!
+loadProgram: aCWPlayer
 
-	| start |
-	start _ self freeCoreRange: aCWRedcode size.
+	| program start |
+	program _ aCWPlayer program.
+	start _ self freeCoreRange: program size.
 	start ifNil: [ CWMarsException signal: 'No free space to load program'. ].
-	aCWRedcode lines withIndexDo: [
+	program lines withIndexDo: [
 		:line :index |
-		self write: line encoded at: start + index - 1 for: aCWRedcode.
+		self write: line encoded at: start + index - 1 for: aCWPlayer.
 	].
 	^ start.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 8/24/2007 18:52'!
+!CWMars methodsFor: 'private' stamp: 'as 8/26/2007 16:06'!
 loadPrograms
 
 	self players do: [
 		:player |
-		counters at: player put: (self loadProgram: player program).
+		counters at: player put: (self loadProgram: player).
 	].! !
 
 !CWMars methodsFor: 'core' stamp: 'as 4/26/2007 21:26'!
@@ -1237,7 +1242,7 @@ newRedcodeImp
 		MOV 0 1'
 	name: 'Imp'.! !
 
-!CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/8/2007 21:40'!
+!CWRedcode class methodsFor: 'instance creation' stamp: 'as 8/8/2007 21:40'!
 newSelectorPrefix
 
 	^ 'newRedcode'.! !

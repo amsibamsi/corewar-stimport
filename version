@@ -1,4 +1,19 @@
-(name 'CoreWar-devel-as.19' message '- switched from CWRedcode to CWPlayer in CWMars and CWRedcode and its subclasses
+(name 'CoreWar-devel-as.20' message '- fix: owners in CWMars were not players but programs
+- CWMarsMorph does now update (redraw) on each step of the mars
+
+-----
+
+todo:
+- stop simulation when closing window
+- redrawing whole morph on each steap is too slow
+- CWMarsMorph must have scroll bars
+- missing in GUI: set number of rounds, set cell size, show current round of a running simulation
+- logging: use better method to update and store text, use colors
+- add custom programs management
+- label players with color
+- visualize program counters and current pc
+- fix dwarf, write more standard programs
+' id 'b22a0f48-53ec-11dc-a4e3-001124784c86' date '26 August 2007' time '5:54:58 pm' author 'as' ancestors ((name 'CoreWar-devel-as.19' message '- switched from CWRedcode to CWPlayer in CWMars and CWRedcode and its subclasses
 - implemented running mars from CWCoreWar
 - implemened simple drawing of core (no updating between steps yet)' id 'f780595b-5292-11dc-b04f-001124784c86' date '25 August 2007' time '12:40:08 am' author 'as' ancestors ((name 'CoreWar-devel-as.18' message 'working on the gui' id 'e70b8d46-503a-11dc-95da-001124784c86' date '22 August 2007' time '1:04:42 am' author 'as' ancestors ((name 'CoreWar-devel-as.17' message 'work in progress on the gui' id '53980ed4-4ced-11dc-88ab-001124784c86' date '17 August 2007' time '8:11:50 pm' author 'as' ancestors ((name 'CoreWar-devel-as.16' message 'work in progress on the gui' id 'c6c99278-4c94-11dc-a653-001124784c86' date '17 August 2007' time '9:37:58 am' author 'as' ancestors ((name 'CoreWar-devel-as.15' message 'work in progress on the gui' id '9404d842-481c-11dc-9ed5-001124784c86' date '11 August 2007' time '5:07:29 pm' author 'as' ancestors ((name 'CoreWar-devel-as.14' message 'work in progress on the gui' id '24c44190-4808-11dc-b7f3-001124784c86' date '11 August 2007' time '2:41:12 pm' author 'as' ancestors ((name 'CoreWar-devel-as.13' message 'external/internal address handling fixes' id 'e985b918-3c40-11dc-ae87-001124784c86' date '27 July 2007' time '2:57:20 pm' author 'as' ancestors ((name 'CoreWar-devel-as.12' message 'started with main application' id 'adde1e26-fffc-11db-8f34-001124784c86' date '11 May 2007' time '10:17:45 pm' author 'as' ancestors ((name 'CoreWar-devel-as.11' message '- several small but crucial fixes
 - added naming to redcode programs' id 'b0baaf0b-f49d-11db-9e39-001124784c86' date '27 April 2007' time '11:00:04 am' author 'as' ancestors ((name 'CoreWar-devel-as.10' message '- fixed internal address handling
@@ -9,4 +24,4 @@
 
 - development versions are named *-devel-* and don''t need to run, pass tests or be coherent
 - release versions are named *-release-* and should run, pass all tests and present a package of complete code
-- there is only on version counter for both branches, so each version is either a development or release version (or maybe in the future some other kind of version)' id '77e16b80-ec02-11db-8ab9-001124784c86' date '16 April 2007' time '12:08:48 pm' author 'as' ancestors () stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())
+- there is only on version counter for both branches, so each version is either a development or release version (or maybe in the future some other kind of version)' id '77e16b80-ec02-11db-8ab9-001124784c86' date '16 April 2007' time '12:08:48 pm' author 'as' ancestors () stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())
