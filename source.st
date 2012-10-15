@@ -3,228 +3,280 @@ SystemOrganization addCategory: #'CoreWar-Redcode'!
 SystemOrganization addCategory: #'CoreWar-Redcode-Tests'!
 SystemOrganization addCategory: #'CoreWar-Tests'!
 
-TestCase subclass: #CWCodingTest
-	instanceVariableNames: 'mars'
-	classVariableNames: ''
-	poolDictionaries: ''
-	category: 'CoreWar-Tests'!
-
-!CWCodingTest commentStamp: 'as 4/16/2007 11:52' prior: 0!
-CoreWar coding style tests.!
-
-!CWCodingTest methodsFor: 'testing' stamp: 'as 4/16/2007 11:27'!
-testClassComments
-
-	| package |
-	package _ PackageOrganizer default packageOfClass: self class.
-	package classes do: [
-		:class |
-		self assert: class hasComment.
-	].! !
-
-TestCase subclass: #CWMarsTest
-	instanceVariableNames: 'mars'
-	classVariableNames: ''
-	poolDictionaries: ''
-	category: 'CoreWar-Tests'!
-
-!CWMarsTest commentStamp: 'as 4/16/2007 11:03' prior: 0!
-CWMars tests.!
-
-!CWMarsTest methodsFor: 'running' stamp: 'as 4/16/2007 11:04'!
-setUp
-
-	mars _ CWMars new.! !
-
-!CWMarsTest methodsFor: 'testing' stamp: 'as 4/26/2007 11:09'!
-testCoreSize
-	
-	self assert: (CWMars new coreSize: 1024; yourself) coreSize = 1024.! !
-
-!CWMarsTest methodsFor: 'testing' stamp: 'as 4/27/2007 10:23'!
-testDefaults
-	
-	self assert: mars coreSize notNil.
-	self assert: mars rounds notNil.
-	self assert: mars stepDelay notNil.! !
-
-!CWMarsTest methodsFor: 'testing' stamp: 'as 4/27/2007 10:20'!
-testMaxValue
-	
-	"Otherwise not all encoded instructions can't be stored in the core."
-	self assert: CWMars maxValue >= (2 raisedTo: CWRedcodeInstruction encodingBits).! !
-
-TestCase subclass: #CWRedcodeInstructionTest
+Error subclass: #CWMarsException
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'CoreWar-Redcode-Tests'!
+	category: 'CoreWar'!
 
-!CWRedcodeInstructionTest commentStamp: 'as 4/18/2007 10:27' prior: 0!
-Test Redcode instructions.!
+!CWMarsException commentStamp: 'as 4/26/2007 11:08' prior: 0!
+MARS interpreter error.!
 
-!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:10'!
-testBuildingFromEncoding
-
-	| encoding redcode |
-	encoding _ Integer readFrom: (ReadStream on: '1001000000000100110101') radix: 2.
-	self
-		shouldnt: [ redcode _ CWRedcodeInstruction encoded: encoding. ]
-		raise: CWRedcodeDecodeException.
-	self assert: redcode class = CWRedcodeJumpZeroInstruction.
-	self assert: redcode operand1 class = CWRedcodeIndirectOperand.
-	self assert: redcode operand1 value = -4.
-	self assert: redcode operand2 class = CWRedcodeRelativeOperand.
-	self assert: redcode operand2 value = 1.! !
-
-!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:10'!
-testBuildingFromSource
-
-	| redcode |
-	self
-		shouldnt: [ redcode _ CWRedcodeInstruction source: 'ADD #1 @2'. ]
-		raise: CWRedcodeSyntaxException.
-	self assert: redcode class = CWRedcodeAddInstruction.
-	self assert: redcode operand1 class = CWRedcodeImmediateOperand.
-	self assert: redcode operand1 value = 1.
-	self assert: redcode operand2 class = CWRedcodeIndirectOperand.
-	self assert: redcode operand2 value = 2.! !
-
-!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:09'!
-testEmptyOperand
-
-	| redcode |
-	redcode _ CWRedcodeInstruction source: 'JMP 0'.
-	self assert: redcode operand2 class = CWRedcodeEmptyOperand.! !
-
-!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:01'!
-testEncoding
-
-	| op1 op2 redcode |
-	op1 _ CWRedcodeImmediateOperand new value: -1; yourself.
-	op2 _ CWRedcodeRelativeOperand new value: -2; yourself.
-	redcode _ CWRedcodeSubtractInstruction new
-		operand1: op1;
-		operand2: op2;
-		yourself.
-	self assert: redcode encoded = 5505123.! !
-
-!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:05'!
-testInvalidInstruction
-
-	self should: [ CWRedcodeInstruction source: 'DATA 0'. ] raise: CWRedcodeSyntaxException.! !
-
-!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:06'!
-testLineTooLong
-
-	self should: [ CWRedcodeInstruction source: 'ADD #1 @0 4'. ] raise: CWRedcodeSyntaxException.! !
-
-!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/19/2007 23:59'!
-testSource
-
-	| op1 op2 redcode |
-	op1 _ CWRedcodeImmediateOperand new value: -1; yourself.
-	op2 _ CWRedcodeRelativeOperand new value: -2; yourself.
-	redcode _ CWRedcodeSubtractInstruction new
-		operand1: op1;
-		operand2: op2;
-		yourself.
-	self assert: redcode source = 'SUB #-1 -2'.! !
-
-!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:04'!
-testTooFewOperands
-
-	self should: [ CWRedcodeInstruction source: 'MOV #1'. ] raise: CWRedcodeSyntaxException.! !
-
-!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:04'!
-testTooManyOperands
-
-	self should: [ CWRedcodeInstruction source: 'DAT #1 #1'. ] raise: CWRedcodeSyntaxException.! !
-
-!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/17/2007 11:25'!
-testUniqueEncodings
-
-	| count encodings |
-	count _ CWRedcodeInstruction allInstructions size.
-	encodings _ Set new.
-	CWRedcodeInstruction allInstructions do: [
-		:class |
-		encodings add: class encoding.
-	].
-	self assert: count = encodings size.! !
-
-!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/17/2007 11:23'!
-testUniqueSymbols
-
-	| count symbols |
-	count _ CWRedcodeInstruction allInstructions size.
-	symbols _ Set new.
-	CWRedcodeInstruction allInstructions do: [
-		:class |
-		symbols add: class symbol.
-	].
-	self assert: count = symbols size.! !
-
-TestCase subclass: #CWRedcodeOperandTest
+Error subclass: #CWRedcodeException
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'CoreWar-Redcode-Tests'!
+	category: 'CoreWar-Redcode'!
 
-!CWRedcodeOperandTest commentStamp: 'as 4/18/2007 10:26' prior: 0!
-Test Redcode operands.!
+!CWRedcodeException commentStamp: 'as 4/16/2007 16:34' prior: 0!
+Generic Redcode exception.!
 
-!CWRedcodeOperandTest methodsFor: 'testing' stamp: 'as 4/18/2007 10:28'!
-testUniqueEncodings
-
-	| count encodings |
-	count _ CWRedcodeOperand allOperands size.
-	encodings _ Set new.
-	CWRedcodeOperand allOperands do: [
-		:class |
-		encodings add: class encoding.
-	].
-	self assert: count = encodings size.! !
-
-TestCase subclass: #CWRedcodeTest
+CWRedcodeException subclass: #CWRedcodeDecodeException
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'CoreWar-Redcode-Tests'!
+	category: 'CoreWar-Redcode'!
 
-!CWRedcodeTest commentStamp: 'as 4/20/2007 08:14' prior: 0!
-Test Redcode.!
+!CWRedcodeDecodeException commentStamp: 'as 4/18/2007 21:19' prior: 0!
+There was an error while trying to decode a redcode program from binary code.!
 
-!CWRedcodeTest methodsFor: 'testing' stamp: 'as 4/20/2007 08:16'!
-testEmptyProgram
+CWRedcodeException subclass: #CWRedcodeSyntaxException
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
 
-	self should: [ CWRedcode source: ''. ] raise: CWRedcodeSyntaxException.
-	self should: [ CWRedcode encoded: Set new. ] raise: CWRedcodeDecodeException.! !
-
-!CWRedcodeTest methodsFor: 'testing' stamp: 'as 4/20/2007 08:25'!
-testEmptySourceLines
-
-	| redcode |
-	redcode _ CWRedcode source:
-		String cr, String cr, 'ADD 1 2', String cr, 'SUB #3 @-5', String cr.
-	self assert: redcode source = ('ADD 1 2', String cr, 'SUB #3 @-5').! !
-
-!CWRedcodeTest methodsFor: 'testing' stamp: 'as 4/20/2007 11:57'!
-testWhitespace
-
-	| redcode |
-	redcode _ CWRedcode source:
-		'   ADD  1   2      ', String cr, '	SUB	 #3		 @-5		'.
-	self assert: redcode source = ('ADD 1 2', String cr, 'SUB #3 @-5').! !
+!CWRedcodeSyntaxException commentStamp: 'as 4/17/2007 13:50' prior: 0!
+There was an error when trying to compile a Redcode program from source code.!
 
 Object subclass: #CWCoreWar
-	instanceVariableNames: ''
+	instanceVariableNames: 'mars window players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
 
 !CWCoreWar commentStamp: 'as 4/30/2007 15:58' prior: 0!
 Main application of Core War.!
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:21'!
+addCustomProgram! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 13:04'!
+buildButtonOn: anObject getState: getStateSel action: actionSel
+
+	^ (PluggableButtonMorph
+			on: anObject
+			getState: getStateSel
+			action: actionSel)
+		color: Color white;
+		onColor: Color gray muchLighter offColor: Color gray muchLighter.! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 14:28'!
+buildCustomProgramSelection
+
+	^ Morph new
+		color: Color transparent;
+		layoutPolicy: ProportionalLayout new;
+		addMorph: self buildCustomProgramSelectionButtons
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0 @ 0)
+				offsets: (0 @ 0 corner: (self buttonWidth) @ (self buttonHeight * 3)));
+		addMorph: self buildCustomProgramSelectionList
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 1)
+				offsets: (self buttonWidth @ 0 corner: 0 @ 0)).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 14:31'!
+buildCustomProgramSelectionButtons
+
+	morphs at: #addCustomProgramButton put: (
+		(self
+			buildButtonOn: self
+			getState: #offButtonState
+			action: #addCustomProgram)
+		label: '+';
+		setBalloonText: 'Add a custom program.'
+	).
+	morphs at: #removeCustomProgramButton put: (
+		(self
+			buildButtonOn: self
+			getState: #offButtonState
+			action: #removeCustomProgram)
+		label: '-';
+		setBalloonText: 'Remove selected custom program.'
+	).
+	morphs at: #editCustomProgramButton put: (
+		(self
+			buildButtonOn: self
+			getState: #offButtonState
+			action: #editCustomProgram)
+		label: 'e';
+		setBalloonText: 'Edit selected custom program.'
+	).
+	^ Morph new
+		color: Color transparent;
+		layoutPolicy: ProportionalLayout new;
+		layoutInset: 1;
+		addMorph: (morphs at: #addCustomProgramButton)
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ (1/3)));
+		addMorph: (morphs at: #removeCustomProgramButton)
+			fullFrame: (LayoutFrame fractions: (0 @ (1/3) corner: 1 @ (2/3)));
+		addMorph: (morphs at: #editCustomProgramButton)
+			fullFrame: (LayoutFrame fractions: (0 @ (2/3) corner: 1 @ 1)).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 14:39'!
+buildCustomProgramSelectionList
+
+	^ morphs at: #customProgramSelectionList put: (
+		(PluggableListMorph
+			on: self
+			list: #customPrograms
+			selected: #selectedCustomProgramIndex
+			changeSelected: #selectCustomProgramIndex:)
+		setBalloonText: 'Custom programs.';
+		borderWidth: 1;
+		borderColor: Color gray muchLighter
+	).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 14:28'!
+buildPlayerPanel
+
+	^ Morph new
+		color: Color transparent;
+		layoutPolicy: ProportionalLayout new;
+		addMorph: self buildProgramSelection
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 0.3));
+		addMorph: self buildCustomProgramSelection
+			fullFrame: (LayoutFrame fractions: (0 @ 0.3 corner: 1 @ 0.6)).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 12:41'!
+buildProgramSelection
+
+	^ Morph new
+		color: Color transparent;
+		layoutPolicy: ProportionalLayout new;
+		addMorph: self buildProgramSelectionButtons
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0 @ 0)
+				offsets: (0 @ 0 corner: (self buttonWidth) @ (self buttonHeight * 3)));
+		addMorph: self buildProgramSelectionList
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 1)
+				offsets: (self buttonWidth @ 0 corner: 0 @ 0)).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 13:07'!
+buildProgramSelectionButtons
+
+	morphs at: #refreshProgramsButton put: (
+		(self
+			buildButtonOn: self
+			getState: #offButtonState
+			action: #refreshPrograms)
+		label: 'r';
+		setBalloonText: 'Refresh standard programs list.'
+	).
+	^ Morph new
+		color: Color transparent;
+		layoutPolicy: ProportionalLayout new;
+		layoutInset: 1;
+		addMorph: (morphs at: #refreshProgramsButton)
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ (1/3))).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 14:39'!
+buildProgramSelectionList
+
+	^ morphs at: #programSelectionList put: (
+		(PluggableListMorph
+			on: self
+			list: #programs
+			selected: #selectedProgramIndex
+			changeSelected: #selectProgramIndex:)
+		setBalloonText: 'Standard programs.';
+		borderWidth: 1;
+		borderColor: Color gray muchLighter
+	).! !
+
+!CWCoreWar methodsFor: 'view' stamp: 'as 8/11/2007 12:39'!
+buttonHeight
+
+	^ 25.! !
+
+!CWCoreWar methodsFor: 'view' stamp: 'as 8/11/2007 12:39'!
+buttonWidth
+
+	^ 25.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:43'!
+customPrograms
+
+	^ OrderedCollection new.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:39'!
+editCustomProgram! !
+
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/11/2007 13:02'!
+initialize
+
+	mars _ CWMars new.
+	players _ OrderedCollection new.
+	morphs _ Dictionary new.
+	self initializeWindow.! !
+
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/11/2007 14:24'!
+initializeWindow
+	
+	window _ SystemWindow labelled: 'Core War'.
+	window setWindowColor: Color orange lighter.
+	window minimumExtent: 640@480.
+	
+	window addMorph: self buildPlayerPanel frame: (0 @ 0 corner: 0.3 @ 0.7).! !
+
+!CWCoreWar methodsFor: 'view' stamp: 'as 8/9/2007 14:15'!
+offButtonState
+
+	^ false.! !
+
+!CWCoreWar methodsFor: 'view' stamp: 'as 8/9/2007 18:24'!
+open
+
+	window openInWorld.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/8/2007 16:56'!
+players
+
+	^ players.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/8/2007 21:53'!
+programs
+
+	^ CWRedcode allRedcodes.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 14:16'!
+refreshPrograms! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:39'!
+removeCustomProgram! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/8/2007 17:36'!
+selectPlayerIndex: aNumber
+
+	selectedPlayerIndex _ aNumber.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 14:33'!
+selectProgramIndex: aNumber
+
+	selectedProgramIndex _ aNumber.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 14:33'!
+selecteCustomProgramIndex: aNumber
+
+	selectedCustomProgramIndex _ aNumber.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:42'!
+selectedCustomProgramIndex
+
+	^ selectedCustomProgramIndex ifNil: [ 1. ].! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 14:34'!
+selectedPlayerIndex
+
+	^ selectedPlayerIndex ifNil: [ 0. ].! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 14:06'!
+selectedProgramIndex
+
+	^ selectedProgramIndex ifNil: [ 1. ].! !
+
+!CWCoreWar methodsFor: 'view' stamp: 'as 8/9/2007 19:32'!
+windowExtent
+
+	^ 640@480.! !
 
 Object subclass: #CWMars
 	instanceVariableNames: 'core ownerships programs pc counters size stepDelay rounds'
@@ -255,10 +307,15 @@ valueSize
 
 	^ 2 raisedTo: self valueBits.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/17/2007 15:52'!
+!CWMars methodsFor: 'public' stamp: 'as 8/8/2007 17:02'!
 addProgram: aCWRedcode
 
 	self programs add: aCWRedcode.! !
+
+!CWMars methodsFor: 'public' stamp: 'as 8/8/2007 17:02'!
+addPrograms: aCollection
+
+	aCollection do: [ :aCWRedcode | self addProgram: aCWRedcode. ].! !
 
 !CWMars methodsFor: 'private' stamp: 'as 4/26/2007 18:48'!
 coreAddress: anInteger
@@ -506,6 +563,39 @@ write: valueInteger at: integerAddress for: aCWRedcode
 	self owner: aCWRedcode at: integerAddress.
 	^ value.! !
 
+Object subclass: #CWPlayer
+	instanceVariableNames: 'program name color'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar'!
+
+!CWPlayer commentStamp: 'as 8/8/2007 16:49' prior: 0!
+A player participating in a Core War game.!
+
+!CWPlayer class methodsFor: 'instance creation' stamp: 'as 8/8/2007 17:39'!
+program: aCWRedcode name: aString color: aColor
+
+	^ self new
+		program: aCWRedcode;
+		name: aString;
+		color: aColor;
+		yourself.! !
+
+!CWPlayer methodsFor: 'accessing' stamp: 'as 8/8/2007 17:39'!
+color: aColor
+
+	color _ aColor.! !
+
+!CWPlayer methodsFor: 'accessing' stamp: 'as 8/8/2007 17:39'!
+name: aString
+
+	name _ aString.! !
+
+!CWPlayer methodsFor: 'accessing' stamp: 'as 8/8/2007 17:39'!
+program: aCWRedcode
+
+	program _ aCWRedcode.! !
+
 Object subclass: #CWRedcode
 	instanceVariableNames: 'lines name'
 	classVariableNames: ''
@@ -515,6 +605,20 @@ Object subclass: #CWRedcode
 !CWRedcode commentStamp: 'as 4/18/2007 23:15' prior: 0!
 A Core War program in Redcode language.
 This is a object representation of a Redcode program. It can either be build from source code (string) or encoded binary code (integers).!
+
+!CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/8/2007 21:40'!
+allRedcodes
+
+	| redcodes |
+	redcodes _ OrderedCollection new.
+	self class localSelectors select: [
+		:selector |
+		selector asString beginsWith: self newSelectorPrefix.
+	] thenDo: [
+		:selector |
+		redcodes add: (self perform: selector).
+	].
+	^ redcodes.! !
 
 !CWRedcode class methodsFor: 'instance creation' stamp: 'as 4/20/2007 11:44'!
 encoded: aCollection
@@ -533,6 +637,21 @@ encoded: aCollection
 		count _ count + 1.
 	].
 	^ program.! !
+
+!CWRedcode class methodsFor: 'instance creation' stamp: 'as 8/8/2007 21:43'!
+encoded: aCollection name: aString
+
+	^ (self encoded: aCollection) name: aString; yourself.! !
+
+!CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/8/2007 21:44'!
+newRedcodeMover
+
+	^ self source: 'MOV 0 1' name: 'Mover'.! !
+
+!CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/8/2007 21:40'!
+newSelectorPrefix
+
+	^ 'newRedcode'.! !
 
 !CWRedcode class methodsFor: 'instance creation' stamp: 'as 4/20/2007 11:51'!
 source: aString
@@ -554,6 +673,11 @@ source: aString
 	program lines isEmpty ifTrue: [ CWRedcodeSyntaxException signal: 'Empty source'. ].
 	^ program.! !
 
+!CWRedcode class methodsFor: 'instance creation' stamp: 'as 8/8/2007 21:41'!
+source: sourceString name: nameString
+
+	^ (self source: sourceString) name: nameString; yourself.! !
+
 !CWRedcode methodsFor: 'public' stamp: 'as 4/17/2007 18:06'!
 addLine: aCWRedcodeInstruction
 
@@ -570,7 +694,7 @@ binarySource
 	].
 	^ string.! !
 
-!CWRedcode methodsFor: 'defaults' stamp: 'as 4/27/2007 10:53'!
+!CWRedcode methodsFor: 'defaults' stamp: 'as 8/8/2007 18:05'!
 defaultName
 
 	^ 'Noname'.! !
@@ -591,21 +715,20 @@ lines
 
 	^ lines ifNil: [ lines _ OrderedCollection new. ].! !
 
-!CWRedcode methodsFor: 'accessing' stamp: 'as 4/27/2007 10:54'!
+!CWRedcode methodsFor: 'accessing' stamp: 'as 8/8/2007 18:05'!
 name
 
 	^ name ifNil: [ name _ self defaultName. ].! !
 
-!CWRedcode methodsFor: 'accessing' stamp: 'as 4/27/2007 10:52'!
+!CWRedcode methodsFor: 'accessing' stamp: 'as 8/8/2007 18:05'!
 name: aString
 
 	name _ aString.! !
 
-!CWRedcode methodsFor: 'printing' stamp: 'as 4/27/2007 10:58'!
+!CWRedcode methodsFor: 'printing' stamp: 'as 8/9/2007 11:23'!
 printOn: aStream
 
-	super printOn: aStream.
-	aStream nextPutAll: ' (', self name, ')'.! !
+	aStream nextPutAll: self name, ' (', self lines size asString, ' lines)'.! !
 
 !CWRedcode methodsFor: 'public' stamp: 'as 4/20/2007 14:02'!
 size
@@ -1518,38 +1641,216 @@ valueOn: mars
 
 	^ mars read: (self locationOn: mars).! !
 
-Error subclass: #CWMarsException
+TestCase subclass: #CWCodingTest
+	instanceVariableNames: 'mars'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Tests'!
+
+!CWCodingTest commentStamp: 'as 4/16/2007 11:52' prior: 0!
+CoreWar coding style tests.!
+
+!CWCodingTest methodsFor: 'testing' stamp: 'as 4/16/2007 11:27'!
+testClassComments
+
+	| package |
+	package _ PackageOrganizer default packageOfClass: self class.
+	package classes do: [
+		:class |
+		self assert: class hasComment.
+	].! !
+
+TestCase subclass: #CWMarsTest
+	instanceVariableNames: 'mars'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Tests'!
+
+!CWMarsTest commentStamp: 'as 4/16/2007 11:03' prior: 0!
+CWMars tests.!
+
+!CWMarsTest methodsFor: 'running' stamp: 'as 4/16/2007 11:04'!
+setUp
+
+	mars _ CWMars new.! !
+
+!CWMarsTest methodsFor: 'testing' stamp: 'as 4/26/2007 11:09'!
+testCoreSize
+	
+	self assert: (CWMars new coreSize: 1024; yourself) coreSize = 1024.! !
+
+!CWMarsTest methodsFor: 'testing' stamp: 'as 4/27/2007 10:23'!
+testDefaults
+	
+	self assert: mars coreSize notNil.
+	self assert: mars rounds notNil.
+	self assert: mars stepDelay notNil.! !
+
+!CWMarsTest methodsFor: 'testing' stamp: 'as 4/27/2007 10:20'!
+testMaxValue
+	
+	"Otherwise not all encoded instructions can't be stored in the core."
+	self assert: CWMars maxValue >= (2 raisedTo: CWRedcodeInstruction encodingBits).! !
+
+TestCase subclass: #CWRedcodeInstructionTest
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'CoreWar'!
+	category: 'CoreWar-Redcode-Tests'!
 
-!CWMarsException commentStamp: 'as 4/26/2007 11:08' prior: 0!
-MARS interpreter error.!
+!CWRedcodeInstructionTest commentStamp: 'as 4/18/2007 10:27' prior: 0!
+Test Redcode instructions.!
 
-Error subclass: #CWRedcodeException
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:10'!
+testBuildingFromEncoding
+
+	| encoding redcode |
+	encoding _ Integer readFrom: (ReadStream on: '1001000000000100110101') radix: 2.
+	self
+		shouldnt: [ redcode _ CWRedcodeInstruction encoded: encoding. ]
+		raise: CWRedcodeDecodeException.
+	self assert: redcode class = CWRedcodeJumpZeroInstruction.
+	self assert: redcode operand1 class = CWRedcodeIndirectOperand.
+	self assert: redcode operand1 value = -4.
+	self assert: redcode operand2 class = CWRedcodeRelativeOperand.
+	self assert: redcode operand2 value = 1.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:10'!
+testBuildingFromSource
+
+	| redcode |
+	self
+		shouldnt: [ redcode _ CWRedcodeInstruction source: 'ADD #1 @2'. ]
+		raise: CWRedcodeSyntaxException.
+	self assert: redcode class = CWRedcodeAddInstruction.
+	self assert: redcode operand1 class = CWRedcodeImmediateOperand.
+	self assert: redcode operand1 value = 1.
+	self assert: redcode operand2 class = CWRedcodeIndirectOperand.
+	self assert: redcode operand2 value = 2.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:09'!
+testEmptyOperand
+
+	| redcode |
+	redcode _ CWRedcodeInstruction source: 'JMP 0'.
+	self assert: redcode operand2 class = CWRedcodeEmptyOperand.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:01'!
+testEncoding
+
+	| op1 op2 redcode |
+	op1 _ CWRedcodeImmediateOperand new value: -1; yourself.
+	op2 _ CWRedcodeRelativeOperand new value: -2; yourself.
+	redcode _ CWRedcodeSubtractInstruction new
+		operand1: op1;
+		operand2: op2;
+		yourself.
+	self assert: redcode encoded = 5505123.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:05'!
+testInvalidInstruction
+
+	self should: [ CWRedcodeInstruction source: 'DATA 0'. ] raise: CWRedcodeSyntaxException.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:06'!
+testLineTooLong
+
+	self should: [ CWRedcodeInstruction source: 'ADD #1 @0 4'. ] raise: CWRedcodeSyntaxException.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/19/2007 23:59'!
+testSource
+
+	| op1 op2 redcode |
+	op1 _ CWRedcodeImmediateOperand new value: -1; yourself.
+	op2 _ CWRedcodeRelativeOperand new value: -2; yourself.
+	redcode _ CWRedcodeSubtractInstruction new
+		operand1: op1;
+		operand2: op2;
+		yourself.
+	self assert: redcode source = 'SUB #-1 -2'.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:04'!
+testTooFewOperands
+
+	self should: [ CWRedcodeInstruction source: 'MOV #1'. ] raise: CWRedcodeSyntaxException.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:04'!
+testTooManyOperands
+
+	self should: [ CWRedcodeInstruction source: 'DAT #1 #1'. ] raise: CWRedcodeSyntaxException.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/17/2007 11:25'!
+testUniqueEncodings
+
+	| count encodings |
+	count _ CWRedcodeInstruction allInstructions size.
+	encodings _ Set new.
+	CWRedcodeInstruction allInstructions do: [
+		:class |
+		encodings add: class encoding.
+	].
+	self assert: count = encodings size.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/17/2007 11:23'!
+testUniqueSymbols
+
+	| count symbols |
+	count _ CWRedcodeInstruction allInstructions size.
+	symbols _ Set new.
+	CWRedcodeInstruction allInstructions do: [
+		:class |
+		symbols add: class symbol.
+	].
+	self assert: count = symbols size.! !
+
+TestCase subclass: #CWRedcodeOperandTest
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'CoreWar-Redcode'!
+	category: 'CoreWar-Redcode-Tests'!
 
-!CWRedcodeException commentStamp: 'as 4/16/2007 16:34' prior: 0!
-Generic Redcode exception.!
+!CWRedcodeOperandTest commentStamp: 'as 4/18/2007 10:26' prior: 0!
+Test Redcode operands.!
 
-CWRedcodeException subclass: #CWRedcodeDecodeException
+!CWRedcodeOperandTest methodsFor: 'testing' stamp: 'as 4/18/2007 10:28'!
+testUniqueEncodings
+
+	| count encodings |
+	count _ CWRedcodeOperand allOperands size.
+	encodings _ Set new.
+	CWRedcodeOperand allOperands do: [
+		:class |
+		encodings add: class encoding.
+	].
+	self assert: count = encodings size.! !
+
+TestCase subclass: #CWRedcodeTest
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'CoreWar-Redcode'!
+	category: 'CoreWar-Redcode-Tests'!
 
-!CWRedcodeDecodeException commentStamp: 'as 4/18/2007 21:19' prior: 0!
-There was an error while trying to decode a redcode program from binary code.!
+!CWRedcodeTest commentStamp: 'as 4/20/2007 08:14' prior: 0!
+Test Redcode.!
 
-CWRedcodeException subclass: #CWRedcodeSyntaxException
-	instanceVariableNames: ''
-	classVariableNames: ''
-	poolDictionaries: ''
-	category: 'CoreWar-Redcode'!
+!CWRedcodeTest methodsFor: 'testing' stamp: 'as 4/20/2007 08:16'!
+testEmptyProgram
 
-!CWRedcodeSyntaxException commentStamp: 'as 4/17/2007 13:50' prior: 0!
-There was an error when trying to compile a Redcode program from source code.!
+	self should: [ CWRedcode source: ''. ] raise: CWRedcodeSyntaxException.
+	self should: [ CWRedcode encoded: Set new. ] raise: CWRedcodeDecodeException.! !
+
+!CWRedcodeTest methodsFor: 'testing' stamp: 'as 4/20/2007 08:25'!
+testEmptySourceLines
+
+	| redcode |
+	redcode _ CWRedcode source:
+		String cr, String cr, 'ADD 1 2', String cr, 'SUB #3 @-5', String cr.
+	self assert: redcode source = ('ADD 1 2', String cr, 'SUB #3 @-5').! !
+
+!CWRedcodeTest methodsFor: 'testing' stamp: 'as 4/20/2007 11:57'!
+testWhitespace
+
+	| redcode |
+	redcode _ CWRedcode source:
+		'   ADD  1   2      ', String cr, '	SUB	 #3		 @-5		'.
+	self assert: redcode source = ('ADD 1 2', String cr, 'SUB #3 @-5').! !
