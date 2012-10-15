@@ -669,10 +669,11 @@ findLeastUsedPlayerColor
 	].
 	^ color key.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/29/2007 14:42'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/29/2007 17:19'!
 initialize
 
 	mars _ CWMars new.
+	mars addDependent: self.
 	players _ OrderedCollection new.
 	morphs _ Dictionary new.
 	selectedProgramIndex _ selectedCustomProgramIndex _ selectedPlayerIndex _ 0.
@@ -955,6 +956,13 @@ unselectProgram
 	selectedProgramIndex _ 0.
 	self changed: #selectedProgramIndex.! !
 
+!CWCoreWar methodsFor: 'updating' stamp: 'as 8/29/2007 17:15'!
+update: aSymbol with: anObject
+
+	aSymbol = #playerDeath ifTrue: [
+		self logInfo: 'Player ', anObject asString, ' died'.
+	].! !
+
 !CWCoreWar methodsFor: 'view' stamp: 'as 8/11/2007 16:23'!
 windowColor
 
@@ -1185,7 +1193,7 @@ rounds: anInteger
 
 	rounds _ anInteger.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 8/24/2007 18:42'!
+!CWMars methodsFor: 'public' stamp: 'as 8/29/2007 17:13'!
 run
 
 	| activePlayers instruction counter |
@@ -1205,6 +1213,7 @@ run
 				on: CWRedcodeDecodeException
 				do: [
 					activePlayers remove: player.
+					self changed: #playerDeath with: player.
 					activePlayers size = 1 ifTrue: [ ^ activePlayers. ].
 				].
 		].
@@ -1281,10 +1290,10 @@ color: aColor
 
 	color _ aColor.! !
 
-!CWPlayer methodsFor: 'printing' stamp: 'as 8/17/2007 11:43'!
+!CWPlayer methodsFor: 'printing' stamp: 'as 8/29/2007 17:15'!
 printOn: aStream
 
-	aStream nextPutAll: program name, ' (', (color name ifNil: [ 'unknown color'. ]), ')'.! !
+	aStream nextPutAll: program name, '(', (color name ifNil: [ 'unknown color'. ]), ')'.! !
 
 !CWPlayer methodsFor: 'accessing' stamp: 'as 8/23/2007 17:06'!
 program
