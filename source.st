@@ -39,15 +39,15 @@ Object subclass: #CWMars
 !CWMars commentStamp: 'as 4/16/2007 11:51' prior: 0!
 Memory Array Redcode Simulator - the Core War interpreter.!
 
-!CWMars class methodsFor: 'core' stamp: 'as 4/18/2007 23:13'!
+!CWMars class methodsFor: 'core' stamp: 'as 4/19/2007 17:01'!
 maxValue
 
-	^ self valueSize / 2.! !
+	^ self valueSize - 1.! !
 
-!CWMars class methodsFor: 'core' stamp: 'as 4/18/2007 17:18'!
+!CWMars class methodsFor: 'core' stamp: 'as 4/19/2007 17:01'!
 minValue
 
-	^ self maxValue negated - 1.! !
+	^ 0.! !
 
 !CWMars class methodsFor: 'limits' stamp: 'as 4/18/2007 17:11'!
 valueBits
@@ -71,12 +71,12 @@ addProgram: aCWRedcode
 
 	self programs add: aCWRedcode.! !
 
-!CWMars methodsFor: 'accessing' stamp: 'as 4/17/2007 19:34'!
+!CWMars methodsFor: 'private' stamp: 'as 4/19/2007 17:19'!
 core
 
-	^ core ifNil: [ core _ OrderedCollection new: self size. ].! !
+	^ core ifNil: [ core _ Array new: self size. ].! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/16/2007 11:28'!
+!CWMars methodsFor: 'accessing' stamp: 'as 4/16/2007 11:28'!
 coreSize
 
 	^ self core size.! !
@@ -144,7 +144,7 @@ programs
 
 	^ programs ifNil: [ programs _ OrderedCollection new. ].! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/18/2007 17:09'!
+!CWMars methodsFor: 'core' stamp: 'as 4/18/2007 17:09'!
 read: integerAddress
 
 	"Read value from the specified address."
@@ -154,12 +154,17 @@ read: integerAddress
 	value _ (self core at: address) ifNil: [ self core at: address put: self defaultValue. ].
 	^ value.! !
 
-!CWMars methodsFor: 'accessing' stamp: 'as 4/15/2007 21:50'!
+!CWMars methodsFor: 'private' stamp: 'as 4/19/2007 17:15'!
+size
+
+	^ size ifNil: [ size _ self defaultSize. ].! !
+
+!CWMars methodsFor: 'private' stamp: 'as 4/15/2007 21:50'!
 size: anInteger
 
 	size _ anInteger.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/18/2007 17:12'!
+!CWMars methodsFor: 'core' stamp: 'as 4/18/2007 17:12'!
 write: anInteger at: integerAddress
 
 	"Write value at the specified address."
@@ -219,8 +224,8 @@ addLine: aCWRedcodeInstruction
 
 	self lines add: aCWRedcodeInstruction.! !
 
-!CWRedcode methodsFor: 'converting' stamp: 'as 4/18/2007 23:19'!
-binaryEncoded
+!CWRedcode methodsFor: 'converting' stamp: 'as 4/19/2007 09:21'!
+binarySource
 
 	| string |
 	string _ String new.
@@ -281,6 +286,11 @@ encoding
 
 	^ 2.! !
 
+!CWRedcodeAddInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 16:06'!
+operand2Types
+
+	^ CWRedcodeOperand relativeOperands.! !
+
 !CWRedcodeAddInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 08:26'!
 symbol
 
@@ -325,6 +335,11 @@ hasSecondOperand
 
 	^ false.! !
 
+!CWRedcodeDataInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 16:02'!
+operand2Types
+
+	^ Set new add: CWRedcodeEmptyOperand; yourself.! !
+
 !CWRedcodeDataInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 08:22'!
 symbol
 
@@ -343,6 +358,11 @@ DJZ A B - Decrement contents of location A by 1. If location A now holds 0, jump
 encoding
 
 	^ 6.! !
+
+!CWRedcodeDecrementJumpZeroInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 16:07'!
+operand2Types
+
+	^ CWRedcodeOperand relativeOperands.! !
 
 !CWRedcodeDecrementJumpZeroInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:06'!
 symbol
@@ -365,17 +385,23 @@ allInstructions
 		add: CWRedcodeCompareInstruction;
 		yourself.! !
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/18/2007 23:34'!
+!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/19/2007 16:26'!
 encoded: anInteger
 
-	| instruction type op1 op2 |
-	type _ anInteger bitAnd: (2 raisedTo: self typeEncodingBits) - 1.
-	op1 _ (anInteger >> self typeEncodingBits) bitAnd: (2 raisedTo: CWRedcodeOperand encodingBits) - 1.
-	op2 _ anInteger >> (self typeEncodingBits + CWRedcodeOperand encodingBits).
+	| instruction val type op1 op2 |
+	val _ anInteger.
+	op2 _ val // (2 raisedTo: self operand2BitShift).
+	val _ val \\ (2 raisedTo: self operand2BitShift).
+	op1 _ val // (2 raisedTo: self operand1BitShift).
+	type _ val \\ (2 raisedTo: self operand1BitShift).
 	instruction _ self instructionForInteger: type.
-	instruction
-		operand1: (CWRedcodeOperand encoded: op1);
-		operand2: (CWRedcodeOperand encoded: op2).
+	[
+		instruction
+			operand1: (CWRedcodeOperand encoded: op1);
+			operand2: (CWRedcodeOperand encoded: op2).
+	]
+		on: CWRedcodeException
+		do: [ :ex | CWRedcodeDecodeException signal: ex messageText. ].
 	^ instruction.! !
 
 !CWRedcodeInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:25'!
@@ -395,7 +421,7 @@ hasSecondOperand
 
 	^ true.! !
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/18/2007 21:18'!
+!CWRedcodeInstruction class methodsFor: 'private' stamp: 'as 4/18/2007 21:18'!
 instructionForInteger: anInteger
 
 	self allInstructions do: [
@@ -404,7 +430,7 @@ instructionForInteger: anInteger
 	].
 	CWRedcodeDecodeException signal: '"', anInteger asString, '" is not a valid instruction type'.! !
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 14:12'!
+!CWRedcodeInstruction class methodsFor: 'private' stamp: 'as 4/17/2007 14:12'!
 instructionForString: aString
 
 	self allInstructions do: [
@@ -413,20 +439,48 @@ instructionForString: aString
 	].
 	CWRedcodeSyntaxException signal: '"', aString, '" is not a valid instruction'.! !
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/18/2007 23:35'!
+!CWRedcodeInstruction class methodsFor: 'converting' stamp: 'as 4/19/2007 13:10'!
+operand1BitShift
+
+	^ self typeEncodingBits.! !
+
+!CWRedcodeInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 15:22'!
+operand1Types
+
+	"Allowed operand types for operand 1."
+
+	^ CWRedcodeOperand allOperands.! !
+
+!CWRedcodeInstruction class methodsFor: 'converting' stamp: 'as 4/19/2007 13:11'!
+operand2BitShift
+
+	^ self operand1BitShift + CWRedcodeOperand encodingBits.! !
+
+!CWRedcodeInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 15:22'!
+operand2Types
+
+	"Allowed operand types of operand 2."
+
+	^ CWRedcodeOperand allOperands.! !
+
+!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/19/2007 16:23'!
 source: aString
 
 	| instruction tokens rest |
 	tokens _ self tokensFor: aString.
 	instruction _ self instructionForString: (tokens at: 1).
-	instruction operand1: (CWRedcodeOperand source: (tokens at: 2)).
-	instruction hasSecondOperand ifTrue: [
-		instruction operand2: (CWRedcodeOperand source: (tokens at: 3)).
-		rest _ tokens at: 4.
-	] ifFalse: [
-		instruction operand2: (CWRedcodeEmptyOperand new).
-		rest _ (tokens at: 3), (tokens at: 4).
-	].
+	[
+		instruction operand1: (CWRedcodeOperand source: (tokens at: 2)).
+		instruction hasSecondOperand ifTrue: [
+			instruction operand2: (CWRedcodeOperand source: (tokens at: 3)).
+			rest _ tokens at: 4.
+		] ifFalse: [
+			instruction operand2: (CWRedcodeEmptyOperand new).
+			rest _ (tokens at: 3).
+		].
+	]
+		on: CWRedcodeException
+		do: [ :ex | CWRedcodeSyntaxException signal: ex messageText. ].
 	rest isEmpty ifFalse:
 		[ CWRedcodeSyntaxException signal: 'Expected end of line instead of "', rest, '"'. ].
 	^ instruction.! !
@@ -439,7 +493,7 @@ symbol
 
 	self subclassResponsibility.! !
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/18/2007 10:53'!
+!CWRedcodeInstruction class methodsFor: 'private' stamp: 'as 4/18/2007 10:53'!
 tokensFor: aString
 
 	| tokens stream |
@@ -460,12 +514,12 @@ allInstructions
 
 	^ self class allInstructions.! !
 
-!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/18/2007 23:34'!
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/19/2007 13:13'!
 encoded
 
 	^ self encoding +
-		(operand1 encoded * (2 raisedTo: self typeEncodingBits)) +
-		(operand2 encoded * (2 raisedTo: operand1 encodingBits + self typeEncodingBits)).! !
+		(operand1 encoded * (2 raisedTo: self operand1BitShift)) +
+		(operand2 encoded * (2 raisedTo: self operand2BitShift)).! !
 
 !CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 11:25'!
 encoding
@@ -489,20 +543,56 @@ hasSecondOperand
 
 	^ self class hasSecondOperand.! !
 
-!CWRedcodeInstruction methodsFor: 'accessing' stamp: 'as 4/16/2007 16:10'!
+!CWRedcodeInstruction methodsFor: 'private' stamp: 'as 4/19/2007 21:07'!
+operand1
+
+	^ operand1.! !
+
+!CWRedcodeInstruction methodsFor: 'private' stamp: 'as 4/19/2007 16:46'!
 operand1: aCWRedcodeOperand
 
+	(self operand1Types includes: aCWRedcodeOperand class) ifFalse: [
+		CWRedcodeException signal: 'Invalid type for operand 1'.
+	].
 	operand1 _ aCWRedcodeOperand.! !
 
-!CWRedcodeInstruction methodsFor: 'accessing' stamp: 'as 4/16/2007 16:10'!
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/19/2007 13:11'!
+operand1BitShift
+
+	^ self class operand1BitShift.! !
+
+!CWRedcodeInstruction methodsFor: 'private' stamp: 'as 4/19/2007 15:30'!
+operand1Types
+
+	^ self class operand1Types.! !
+
+!CWRedcodeInstruction methodsFor: 'private' stamp: 'as 4/19/2007 21:07'!
+operand2
+
+	^ operand2.! !
+
+!CWRedcodeInstruction methodsFor: 'private' stamp: 'as 4/19/2007 16:46'!
 operand2: aCWRedcodeOperand
 
+	(self operand2Types includes: aCWRedcodeOperand class) ifFalse: [
+		CWRedcodeException signal: 'Invalid type for operand 2'.
+	].
 	operand2 _ aCWRedcodeOperand.! !
 
-!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/18/2007 23:32'!
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/19/2007 13:11'!
+operand2BitShift
+
+	^ self class operand2BitShift.! !
+
+!CWRedcodeInstruction methodsFor: 'private' stamp: 'as 4/19/2007 15:30'!
+operand2Types
+
+	^ self class operand2Types.! !
+
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/19/2007 17:11'!
 source
 
-	^ (self symbol asString, ' ', operand1 asString, ' ', operand2 asString) withBlanksCondensed.! !
+	^ (self symbol asString, ' ', operand1 source, ' ', operand2 source) withBlanksCondensed.! !
 
 !CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/18/2007 11:31'!
 symbol
@@ -533,6 +623,16 @@ hasSecondOperand
 
 	^ false.! !
 
+!CWRedcodeJumpInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 16:07'!
+operand1Types
+
+	^ CWRedcodeOperand relativeOperands.! !
+
+!CWRedcodeJumpInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 16:06'!
+operand2Types
+
+	^ Set new add: CWRedcodeEmptyOperand; yourself.! !
+
 !CWRedcodeJumpInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:23'!
 symbol
 
@@ -551,6 +651,11 @@ JMZ A B - If operand A is 0, jump to location B; otherwise continue with next in
 encoding
 
 	^ 5.! !
+
+!CWRedcodeJumpZeroInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 16:19'!
+operand2Types
+
+	^ CWRedcodeOperand relativeOperands.! !
 
 !CWRedcodeJumpZeroInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:04'!
 symbol
@@ -571,6 +676,11 @@ encoding
 
 	^ 1.! !
 
+!CWRedcodeMoveInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 16:19'!
+operand2Types
+
+	^ CWRedcodeOperand relativeOperands.! !
+
 !CWRedcodeMoveInstruction class methodsFor: 'converting' stamp: 'as 4/16/2007 16:43'!
 symbol
 
@@ -585,10 +695,15 @@ CWRedcodeInstruction subclass: #CWRedcodeSubtractInstruction
 !CWRedcodeSubtractInstruction commentStamp: 'as 4/17/2007 08:20' prior: 0!
 SUB A B - Subtract operand A from contents of location B and store result in location B.!
 
-!CWRedcodeSubtractInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:30'!
+!CWRedcodeSubtractInstruction class methodsFor: 'converting' stamp: 'as 4/19/2007 17:10'!
 encoding
 
-	^ 2.! !
+	^ 3.! !
+
+!CWRedcodeSubtractInstruction class methodsFor: 'private' stamp: 'as 4/19/2007 16:20'!
+operand2Types
+
+	^ CWRedcodeOperand relativeOperands.! !
 
 !CWRedcodeSubtractInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 08:28'!
 symbol
@@ -634,7 +749,7 @@ symbol
 
 	^ #''.! !
 
-!CWRedcodeEmptyOperand class methodsFor: 'instance creation' stamp: 'as 4/18/2007 11:38'!
+!CWRedcodeEmptyOperand class methodsFor: 'private' stamp: 'as 4/18/2007 11:38'!
 valueRegex
 
 	^ ''.! !
@@ -643,6 +758,11 @@ valueRegex
 initialize
 
 	value _ 0.! !
+
+!CWRedcodeEmptyOperand methodsFor: 'converting' stamp: 'as 4/19/2007 17:12'!
+source
+
+	^ ''.! !
 
 CWRedcodeOperand subclass: #CWRedcodeImmediateOperand
 	instanceVariableNames: ''
@@ -722,13 +842,15 @@ allOperands
 		add: CWRedcodeEmptyOperand;
 		yourself.! !
 
-!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/18/2007 23:37'!
+!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/19/2007 23:39'!
 encoded: anInteger
 
-	| type negative absValue |
-	type _ anInteger bitAnd: (2 raisedTo: self typeEncodingBits) - 1.
-	negative _ (anInteger >> self typeEncodingBits) bitAnd: 1.
-	absValue _ anInteger >> (self typeEncodingBits + 1).
+	| type negative absValue val |
+	val _ anInteger.
+	absValue _ val // (2 raisedTo: self typeEncodingBits + 1).
+	val _ val \\ (2 raisedTo: self typeEncodingBits + 1).
+	negative _ val // (2 raisedTo: self typeEncodingBits).
+	type _ val \\ (2 raisedTo: self typeEncodingBits).
 	self allOperands do: [
 		:class |
 		type = class encoding ifTrue: [ ^ class encoded: (1 - (2 * negative)) * absValue. ].
@@ -747,17 +869,24 @@ encodingBits
 
 	^ self typeEncodingBits + self sizeBits + 1.! !
 
-!CWRedcodeOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 13:00'!
+!CWRedcodeOperand class methodsFor: 'limits' stamp: 'as 4/18/2007 13:00'!
 max
 
 	^ self size / 2.! !
 
-!CWRedcodeOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 13:00'!
+!CWRedcodeOperand class methodsFor: 'limits' stamp: 'as 4/18/2007 13:00'!
 min
 
 	^ self max negated - 1.! !
 
-!CWRedcodeOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 13:00'!
+!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/19/2007 15:32'!
+relativeOperands
+
+	"A set of operands allowed in this language."
+	
+	^ self allOperands remove: CWRedcodeImmediateOperand; yourself.! !
+
+!CWRedcodeOperand class methodsFor: 'limits' stamp: 'as 4/18/2007 13:00'!
 size
 
 	^ 2 raisedTo: self sizeBits.! !
@@ -784,12 +913,12 @@ source: aString
 	].
 	CWRedcodeSyntaxException signal: '"', aString, '" is not a valid operand'.! !
 
-!CWRedcodeOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 22:07'!
+!CWRedcodeOperand class methodsFor: 'converting' stamp: 'as 4/19/2007 21:39'!
 typeEncodingBits
 
 	^ (self allOperands size log: 2) ceiling.! !
 
-!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/18/2007 11:34'!
+!CWRedcodeOperand class methodsFor: 'private' stamp: 'as 4/18/2007 11:34'!
 valueRegex
 
 	"Should return a regular expression as documented in RxParser that
@@ -821,17 +950,17 @@ encodingBits
 
 	^ self class encodingBits.! !
 
-!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/18/2007 13:01'!
+!CWRedcodeOperand methodsFor: 'settings' stamp: 'as 4/18/2007 13:01'!
 max
 
 	^ self class max.! !
 
-!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/18/2007 13:01'!
+!CWRedcodeOperand methodsFor: 'settings' stamp: 'as 4/18/2007 13:01'!
 min
 
 	^ self class min.! !
 
-!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/18/2007 13:00'!
+!CWRedcodeOperand methodsFor: 'settings' stamp: 'as 4/18/2007 13:00'!
 size
 
 	^ self class size.! !
@@ -861,7 +990,7 @@ value
 
 	^ value.! !
 
-!CWRedcodeOperand methodsFor: 'accessing' stamp: 'as 4/18/2007 12:55'!
+!CWRedcodeOperand methodsFor: 'private' stamp: 'as 4/18/2007 12:55'!
 value: anInteger
 
 	anInteger > self max ifTrue: [
@@ -880,8 +1009,8 @@ CWRedcodeOperand subclass: #CWRedcodeRelativeOperand
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeRelativeOperand commentStamp: 'as 4/17/2007 18:37' prior: 0!
-String representation: <number>. The operand is the value at the address that is build from the value of the location plus the offset <number>.!
+!CWRedcodeRelativeOperand commentStamp: 'as 4/20/2007 00:07' prior: 0!
+String representation: <number>. The operand is the value at the address that is build from the value of the current location plus the offset <number>.!
 
 !CWRedcodeRelativeOperand class methodsFor: 'instance creation' stamp: 'as 4/18/2007 23:39'!
 encoded: anInteger
@@ -940,11 +1069,8 @@ setUp
 
 	mars _ CWMars new.! !
 
-!CWMarsTest methodsFor: 'testing' stamp: 'as 4/16/2007 11:56'!
+!CWMarsTest methodsFor: 'testing' stamp: 'as 4/19/2007 17:13'!
 testCoreSize
-
-	mars coreSize: 10.
-	self assert: (mars coreSize = 10).
 	
 	self assert: (CWMars withCoreSize: 1024) coreSize = 1024.! !
 
@@ -956,6 +1082,84 @@ TestCase subclass: #CWRedcodeInstructionTest
 
 !CWRedcodeInstructionTest commentStamp: 'as 4/18/2007 10:27' prior: 0!
 Test Redcode instructions.!
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:10'!
+testBuildingFromEncoding
+
+	| encoding redcode |
+	encoding _ Integer readFrom: (ReadStream on: '1001000000000100110101') radix: 2.
+	self
+		shouldnt: [ redcode _ CWRedcodeInstruction encoded: encoding. ]
+		raise: CWRedcodeDecodeException.
+	self assert: redcode class = CWRedcodeJumpZeroInstruction.
+	self assert: redcode operand1 class = CWRedcodeIndirectOperand.
+	self assert: redcode operand1 value = -4.
+	self assert: redcode operand2 class = CWRedcodeRelativeOperand.
+	self assert: redcode operand2 value = 1.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:10'!
+testBuildingFromSource
+
+	| redcode |
+	self
+		shouldnt: [ redcode _ CWRedcodeInstruction source: 'ADD #1 @2'. ]
+		raise: CWRedcodeSyntaxException.
+	self assert: redcode class = CWRedcodeAddInstruction.
+	self assert: redcode operand1 class = CWRedcodeImmediateOperand.
+	self assert: redcode operand1 value = 1.
+	self assert: redcode operand2 class = CWRedcodeIndirectOperand.
+	self assert: redcode operand2 value = 2.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:09'!
+testEmptyOperand
+
+	| redcode |
+	redcode _ CWRedcodeInstruction source: 'JMP 0'.
+	self assert: redcode operand2 class = CWRedcodeEmptyOperand.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:01'!
+testEncoding
+
+	| op1 op2 redcode |
+	op1 _ CWRedcodeImmediateOperand new value: -1; yourself.
+	op2 _ CWRedcodeRelativeOperand new value: -2; yourself.
+	redcode _ CWRedcodeSubtractInstruction new
+		operand1: op1;
+		operand2: op2;
+		yourself.
+	self assert: redcode encoded = 5505123.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:05'!
+testInvalidInstruction
+
+	self should: [ CWRedcodeInstruction source: 'DATA 0'. ] raise: CWRedcodeSyntaxException.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:06'!
+testLineTooLong
+
+	self should: [ CWRedcodeInstruction source: 'ADD #1 @0 4'. ] raise: CWRedcodeSyntaxException.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/19/2007 23:59'!
+testSource
+
+	| op1 op2 redcode |
+	op1 _ CWRedcodeImmediateOperand new value: -1; yourself.
+	op2 _ CWRedcodeRelativeOperand new value: -2; yourself.
+	redcode _ CWRedcodeSubtractInstruction new
+		operand1: op1;
+		operand2: op2;
+		yourself.
+	self assert: redcode source = 'SUB #-1 -2'.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:04'!
+testTooFewOperands
+
+	self should: [ CWRedcodeInstruction source: 'MOV #1'. ] raise: CWRedcodeSyntaxException.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/20/2007 00:04'!
+testTooManyOperands
+
+	self should: [ CWRedcodeInstruction source: 'DAT #1 #1'. ] raise: CWRedcodeSyntaxException.! !
 
 !CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/17/2007 11:25'!
 testUniqueEncodings
