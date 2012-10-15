@@ -3,7 +3,7 @@ SystemOrganization addCategory: #'CoreWar-Redcode'!
 SystemOrganization addCategory: #'CoreWar-Redcode-Tests'!
 SystemOrganization addCategory: #'CoreWar-Tests'!
 
-Exception subclass: #CWRedcodeException
+Error subclass: #CWRedcodeException
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
@@ -11,6 +11,15 @@ Exception subclass: #CWRedcodeException
 
 !CWRedcodeException commentStamp: 'as 4/16/2007 16:34' prior: 0!
 Generic Redcode exception.!
+
+CWRedcodeException subclass: #CWRedcodeSyntaxException
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeSyntaxException commentStamp: 'as 4/17/2007 13:50' prior: 0!
+There was an error when trying to compile a Redcode program from source code.!
 
 Object subclass: #CWMars
 	instanceVariableNames: 'core programs pc counters size'
@@ -33,51 +42,30 @@ addProgram: aCWProgram
 
 	self programs add: aCWProgram.! !
 
-!CWMars methodsFor: 'accessing' stamp: 'as 4/16/2007 10:55'!
+!CWMars methodsFor: 'accessing' stamp: 'as 4/17/2007 11:53'!
 core
 
-	^ core ifNil: [ self initializeCore. ].! !
+	^ core ifNil: [ core _ Array with: self size. ].! !
 
 !CWMars methodsFor: 'public' stamp: 'as 4/16/2007 11:28'!
 coreSize
 
 	^ self core size.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/16/2007 11:28'!
-coreSize: anInteger
-
-	size _ anInteger.
-	core ifNotNil: [ self initializeCore. ].! !
-
 !CWMars methodsFor: 'defaults' stamp: 'as 4/15/2007 21:19'!
 defaultSize
 
 	^ 4096.! !
 
-!CWMars methodsFor: 'initialize-release' stamp: 'as 4/16/2007 10:55'!
-initializeCore
-
-	core _ Array with: self size.! !
-
-!CWMars methodsFor: 'initialize-release' stamp: 'as 4/16/2007 10:56'!
-initializePrograms
-
-	programs _ OrderedCollection new.! !
-
-!CWMars methodsFor: 'initialize-release' stamp: 'as 4/16/2007 10:56'!
-initializeSize
-
-	size _ self defaultSize.! !
-
-!CWMars methodsFor: 'accessing' stamp: 'as 4/16/2007 10:55'!
+!CWMars methodsFor: 'accessing' stamp: 'as 4/17/2007 11:53'!
 programs
 
-	^ programs ifNil: [ self initializePrograms. ].! !
+	^ programs ifNil: [ programs _ OrderedCollection new. ].! !
 
-!CWMars methodsFor: 'accessing' stamp: 'as 4/16/2007 10:56'!
+!CWMars methodsFor: 'accessing' stamp: 'as 4/17/2007 11:54'!
 size
 
-	^ size ifNil: [ self initializeSize. ].! !
+	^ size ifNil: [ size _ self defaultSize. ].! !
 
 !CWMars methodsFor: 'accessing' stamp: 'as 4/15/2007 21:50'!
 size: anInteger
@@ -93,25 +81,29 @@ Object subclass: #CWProgram
 !CWProgram commentStamp: 'as 4/16/2007 11:51' prior: 0!
 A Core War program.!
 
-!CWProgram class methodsFor: 'instance creation' stamp: 'as 4/16/2007 15:49'!
+!CWProgram class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:49'!
 fromString: aString
+
+	"Initialize the program from source code (parse/compile)."
 
 	self subclassResponsibility.! !
 
-!CWProgram methodsFor: 'public' stamp: 'as 4/16/2007 14:17'!
-addLine: aCWProgramNode
+!CWProgram methodsFor: 'public' stamp: 'as 4/17/2007 11:41'!
+addLine: aCWProgramInstruction
 
-	self lines add: aCWProgramNode.! !
+	self lines add: aCWProgramInstruction.! !
 
-!CWProgram methodsFor: 'initialize-release' stamp: 'as 4/16/2007 14:16'!
-initializeLines
+!CWProgram methodsFor: 'converting' stamp: 'as 4/17/2007 12:54'!
+asString
 
-	lines _ OrderedCollection new.! !
+	"Return the source code of the program."
+	
+	self subclassResponsibility.! !
 
-!CWProgram methodsFor: 'accessing' stamp: 'as 4/16/2007 14:16'!
+!CWProgram methodsFor: 'accessing' stamp: 'as 4/17/2007 11:52'!
 lines
 
-	^ lines ifNil: [ self initializeLines. ].! !
+	^ lines ifNil: [ lines _ OrderedCollection new. ].! !
 
 CWProgram subclass: #CWRedcode
 	instanceVariableNames: ''
@@ -119,48 +111,177 @@ CWProgram subclass: #CWRedcode
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcode commentStamp: 'as 4/16/2007 01:17' prior: 0!
-A Redcode program.!
+!CWRedcode commentStamp: 'as 4/17/2007 01:11' prior: 0!
+A Core War program in Redcode language.!
 
-!CWRedcode class methodsFor: 'instance creation' stamp: 'as 4/16/2007 16:18'!
+!CWRedcode class methodsFor: 'instance creation' stamp: 'as 4/17/2007 13:15'!
 fromString: aString
 
-	| program |
+	| program source |
 	program _ self new.
-	aString linesDo: [
+	source _ aString withSeparatorsCompacted.
+	source linesDo: [
 		:line |
 		program addLine: (CWRedcodeInstruction fromString: line).
 	].
 	^ program.! !
 
-Object subclass: #CWRedcodeInstruction
+!CWRedcode methodsFor: 'converting' stamp: 'as 4/17/2007 12:55'!
+asString
+
+	self notYetImplemented.! !
+
+Object subclass: #CWProgramInstruction
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar'!
+
+!CWProgramInstruction commentStamp: 'as 4/17/2007 11:43' prior: 0!
+A single instruction of a program. The string representation is usually one line in the form of "<instruction> <operand> ...".!
+
+!CWProgramInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 11:46'!
+asInteger
+
+	"Return an integer encoding of this instruction."
+	
+	self subclassResponsibility.! !
+
+!CWProgramInstruction methodsFor: 'executing' stamp: 'as 4/17/2007 11:45'!
+executeOn: aCWMars
+
+	"Execute the instruction on the MARS simulator."
+	
+	self subclassResponsibility.! !
+
+CWProgramInstruction subclass: #CWRedcodeInstruction
 	instanceVariableNames: 'operand1 operand2'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeInstruction commentStamp: 'as 4/16/2007 15:52' prior: 0!
-A Redcode command in the form of "<INSTRUCTION> <OPERAND1> <OPERAND2>".!
+!CWRedcodeInstruction commentStamp: 'as 4/17/2007 11:44' prior: 0!
+A Redcode command in the form of "<instruction> <operand1> [<operand2>]".!
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/16/2007 17:04'!
+CWRedcodeInstruction subclass: #CWRedcodeAddInstruction
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeAddInstruction commentStamp: 'as 4/17/2007 08:19' prior: 0!
+ADD A B - Add operand A to contents of location B and store result in location B.!
+
+!CWRedcodeAddInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:27'!
+encoding
+
+	^ 2.! !
+
+!CWRedcodeAddInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 08:26'!
+symbol
+
+	^ #ADD.! !
+
+CWRedcodeInstruction subclass: #CWRedcodeCompareInstruction
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeCompareInstruction commentStamp: 'as 4/17/2007 11:08' prior: 0!
+CMP A B - Compare operand A with operand B. If they are not equal, skip next instruction; otherwise continue with next instruction.
+!
+
+!CWRedcodeCompareInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:27'!
+encoding
+
+	^ 7.! !
+
+!CWRedcodeCompareInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:08'!
+symbol
+
+	^ #CMP.! !
+
+CWRedcodeInstruction subclass: #CWRedcodeDataInstruction
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeDataInstruction commentStamp: 'as 4/17/2007 08:17' prior: 0!
+DAT B - Initialize location to value B.!
+
+!CWRedcodeDataInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:28'!
+encoding
+
+	^ 0.! !
+
+!CWRedcodeDataInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 08:22'!
+symbol
+
+	^ #DAT.! !
+
+CWRedcodeInstruction subclass: #CWRedcodeDecrementJumpZeroInstruction
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeDecrementJumpZeroInstruction commentStamp: 'as 4/17/2007 11:06' prior: 0!
+DJZ A B - Decrement contents of location A by 1. If location A now holds 0, jump to location B; otherwise continue with next instruction.!
+
+!CWRedcodeDecrementJumpZeroInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:28'!
+encoding
+
+	^ 6.! !
+
+!CWRedcodeDecrementJumpZeroInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:06'!
+symbol
+
+	^ #DJZ.! !
+
+!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:22'!
+allInstructions
+
+	"A set of instructions allowed in this language."
+
+	^ Set new
+		add: CWRedcodeDataInstruction;
+		add: CWRedcodeMoveInstruction;
+		add: CWRedcodeAddInstruction;
+		add: CWRedcodeSubtractInstruction;
+		add: CWRedcodeJumpInstruction;
+		add: CWRedcodeJumpZeroInstruction;
+		add: CWRedcodeDecrementJumpZeroInstruction;
+		add: CWRedcodeCompareInstruction;
+		yourself.! !
+
+!CWRedcodeInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:25'!
+encoding
+
+	"All instructions must be sequentially numbered with an integer for integer encoding."
+
+	self subclassResponsibility.! !
+
+!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 12:51'!
 fromString: aString
 
-	| command tokens instruction |
-	command _ self new.
+	| instruction tokens |
+	instruction _ self new.
 	tokens _ self tokensFor: aString.
 	instruction _ self instructionForString: (tokens at: 1).
 	instruction operand1: (CWRedcodeOperand fromString: (tokens at: 2)).
-	instruction operand1: (CWRedcodeOperand fromString: (tokens at: 3)).
-	^ command.! !
+	instruction operand2: (CWRedcodeOperand fromString: (tokens at: 3)).
+	^ instruction.! !
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/16/2007 16:31'!
+!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 14:12'!
 instructionForString: aString
 
-	subclasses do: [
-		:subclass |
-		subclass symbol = aString asSymbol ifTrue: [ ^ subclass new. ].
+	self allInstructions do: [
+		:class |
+		class symbol = aString asSymbol ifTrue: [ ^ class new. ].
 	].
-	CWRedcodeException signal: 'No instruction found for symbol #', aString.! !
+	CWRedcodeSyntaxException signal: '"', aString, '" is not a valid instruction'.! !
 
 !CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/16/2007 16:31'!
 symbol
@@ -170,13 +291,14 @@ symbol
 
 	self subclassResponsibility.! !
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/16/2007 17:04'!
+!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 12:51'!
 tokensFor: aString
 
 	| tokens stream |
 	tokens _ OrderedCollection new.
-	stream _ ReadStream on: aString.
-	1 to: 3 do: [
+	"Append a space, each token must be terminated with a space."
+	stream _ ReadStream on: aString, ' '.
+	3 timesRepeat: [
 		tokens add: (stream nextDelimited: ' ' asCharacter).
 	].
 	^ tokens.! !
@@ -186,10 +308,17 @@ asInteger
 
 	self notYetImplemented.! !
 
-!CWRedcodeInstruction methodsFor: 'executing' stamp: 'as 4/16/2007 17:06'!
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 11:25'!
+encoding
+
+	^ self class encoding.! !
+
+!CWRedcodeInstruction methodsFor: 'executing' stamp: 'as 4/17/2007 11:33'!
 executeOn: aCWMars
 
-	self notYetImplemented.! !
+	"Execute the instruction on the MARS simulator."
+	
+	self subclassResponsibility.! !
 
 !CWRedcodeInstruction methodsFor: 'accessing' stamp: 'as 4/16/2007 16:10'!
 operand1: aCWRedcodeOperand
@@ -201,19 +330,81 @@ operand2: aCWRedcodeOperand
 
 	operand2 _ aCWRedcodeOperand.! !
 
+CWRedcodeInstruction subclass: #CWRedcodeJumpInstruction
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeJumpInstruction commentStamp: 'as 4/17/2007 08:34' prior: 0!
+JMP B - Jump to location B.!
+
+!CWRedcodeJumpInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:29'!
+encoding
+
+	^ 4.! !
+
+!CWRedcodeJumpInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:23'!
+symbol
+
+	^ #JMP.! !
+
+CWRedcodeInstruction subclass: #CWRedcodeJumpZeroInstruction
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeJumpZeroInstruction commentStamp: 'as 4/17/2007 11:00' prior: 0!
+JMZ A B - If operand A is 0, jump to location B; otherwise continue with next instruction.!
+
+!CWRedcodeJumpZeroInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:29'!
+encoding
+
+	^ 5.! !
+
+!CWRedcodeJumpZeroInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:04'!
+symbol
+
+	^ #JMZ.! !
+
 CWRedcodeInstruction subclass: #CWRedcodeMoveInstruction
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeMoveInstruction commentStamp: 'as 4/16/2007 16:42' prior: 0!
-Redcode move instruction.!
+!CWRedcodeMoveInstruction commentStamp: 'as 4/17/2007 01:13' prior: 0!
+MOV A B - Move A into location B.!
+
+!CWRedcodeMoveInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:29'!
+encoding
+
+	^ 1.! !
 
 !CWRedcodeMoveInstruction class methodsFor: 'instance creation' stamp: 'as 4/16/2007 16:43'!
 symbol
 
 	^ #MOV.! !
+
+CWRedcodeInstruction subclass: #CWRedcodeSubtractInstruction
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeSubtractInstruction commentStamp: 'as 4/17/2007 08:20' prior: 0!
+SUB A B - Subtract operand A from contents of location B and store result in location B.!
+
+!CWRedcodeSubtractInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:30'!
+encoding
+
+	^ 2.! !
+
+!CWRedcodeSubtractInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 08:28'!
+symbol
+
+	^ #SUB.! !
 
 Object subclass: #CWRedcodeOperand
 	instanceVariableNames: 'value'
@@ -230,8 +421,8 @@ CWRedcodeOperand subclass: #CWRedcodeImmediateOperand
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeImmediateOperand commentStamp: 'as 4/16/2007 21:15' prior: 0!
-#<value>, where <value> is the operand.!
+!CWRedcodeImmediateOperand commentStamp: 'as 4/17/2007 01:30' prior: 0!
+String representation: #<number>. The operand is <number>.!
 
 !CWRedcodeImmediateOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 21:57'!
 fromString: aString
@@ -245,15 +436,58 @@ startCharacters
 
 	^ '#'.! !
 
-!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 21:09'!
+!CWRedcodeImmediateOperand methodsFor: 'converting' stamp: 'as 4/17/2007 08:11'!
+encoding
+
+	^ 0.! !
+
+CWRedcodeOperand subclass: #CWRedcodeIndirectOperand
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeIndirectOperand commentStamp: 'as 4/17/2007 01:33' prior: 0!
+String representation: @<number>. Like a relative operand but the resulting operand is interpreted as address where the real operand resides.!
+
+!CWRedcodeIndirectOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 23:29'!
 fromString: aString
 
-	subclasses do: [
-		:subclass |
-		(subclass startCharacters includes: aString first)
-			ifTrue: [ ^ subclass fromString: aString. ].
+	^ self new
+		value: (aString copyFrom: 2 to: aString size) asInteger;
+		yourself.! !
+
+!CWRedcodeIndirectOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 23:22'!
+startCharacters
+
+	^ '@'.! !
+
+!CWRedcodeIndirectOperand methodsFor: 'converting' stamp: 'as 4/17/2007 08:12'!
+encoding
+
+	^ 2.! !
+
+!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:18'!
+allOperands
+
+	"A set of operands allowed in this language."
+	
+	^ Set new
+		add: CWRedcodeImmediateOperand;
+		add: CWRedcodeRelativeOperand;
+		add: CWRedcodeIndirectOperand;
+		yourself.! !
+
+!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/17/2007 14:12'!
+fromString: aString
+
+	aString ifEmpty: [ CWRedcodeSyntaxException signal: 'Empty operand'. ].
+	self allOperands do: [
+		:class |
+		(class startCharacters includes: aString first)
+			ifTrue: [ ^ class fromString: aString. ].
 	].
-	CWRedcodeException signal: aString, ' is not a valid operand'.! !
+	CWRedcodeSyntaxException signal: '"', aString, '" is not a valid operand'.! !
 
 !CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 21:13'!
 startCharacters
@@ -262,6 +496,13 @@ startCharacters
 	 starting character of the value to initialize an instance from."
 
 	self subclassResponsibility.! !
+
+!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/17/2007 08:16'!
+encoding
+
+	"All operands must be sequentially numbered with an integer for integer encoding."
+
+	^ self subclassResponsibility.! !
 
 !CWRedcodeOperand methodsFor: 'accessing' stamp: 'as 4/16/2007 17:07'!
 value
@@ -272,6 +513,32 @@ value
 value: anInteger
 
 	value _ anInteger.! !
+
+CWRedcodeOperand subclass: #CWRedcodeRelativeOperand
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeRelativeOperand commentStamp: 'as 4/17/2007 01:29' prior: 0!
+String representation: <number>. The operand is the value at the address build from the program counter plus the offset <number>.!
+
+!CWRedcodeRelativeOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 23:06'!
+fromString: aString
+
+	^ self new
+		value: aString asInteger;
+		yourself.! !
+
+!CWRedcodeRelativeOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 23:05'!
+startCharacters
+
+	^ '-1234567890'.! !
+
+!CWRedcodeRelativeOperand methodsFor: 'converting' stamp: 'as 4/17/2007 08:11'!
+encoding
+
+	^ 1.! !
 
 TestCase subclass: #CWCodingTest
 	instanceVariableNames: 'mars'
@@ -313,3 +580,36 @@ testCoreSize
 	self assert: (mars coreSize = 10).
 	
 	self assert: (CWMars withCoreSize: 1024) coreSize = 1024.! !
+
+TestCase subclass: #CWRedcodeInstructionTest
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode-Tests'!
+
+!CWRedcodeInstructionTest commentStamp: 'as 4/17/2007 08:30' prior: 0!
+Test instruction encoding.!
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/17/2007 11:25'!
+testUniqueEncodings
+
+	| count encodings |
+	count _ CWRedcodeInstruction allInstructions size.
+	encodings _ Set new.
+	CWRedcodeInstruction allInstructions do: [
+		:class |
+		encodings add: class encoding.
+	].
+	self assert: count = encodings size.! !
+
+!CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/17/2007 11:23'!
+testUniqueSymbols
+
+	| count symbols |
+	count _ CWRedcodeInstruction allInstructions size.
+	symbols _ Set new.
+	CWRedcodeInstruction allInstructions do: [
+		:class |
+		symbols add: class symbol.
+	].
+	self assert: count = symbols size.! !

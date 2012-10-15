@@ -1,5 +1,5 @@
-(name 'CoreWar-devel-as.2' message 'continued on syntax tree building from string' id '430bcd8c-ec56-11db-86d5-001124784c86' date '16 April 2007' time '10:08:37 pm' author 'as' ancestors ((name 'CoreWar-devel-as.1' message 'first check-in
+(name 'CoreWar-devel-as.3' message 'building a redcode syntax tree from source should work so far' id '1f854fc8-ecdd-11db-b80f-001124784c86' date '17 April 2007' time '2:13:59 pm' author 'as' ancestors ((name 'CoreWar-devel-as.2' message 'continued on syntax tree building from string' id '430bcd8c-ec56-11db-86d5-001124784c86' date '16 April 2007' time '10:08:37 pm' author 'as' ancestors ((name 'CoreWar-devel-as.1' message 'first check-in
 
 - development versions are named *-devel-* and don''t need to run, pass tests or be coherent
 - release versions are named *-release-* and should run, pass all tests and present a package of complete code
-- there is only on version counter for both branches, so each version is either a development or release version (or maybe in the future some other kind of version)' id '77e16b80-ec02-11db-8ab9-001124784c86' date '16 April 2007' time '12:08:48 pm' author 'as' ancestors () stepChildren ())) stepChildren ())
+- there is only on version counter for both branches, so each version is either a development or release version (or maybe in the future some other kind of version)' id '77e16b80-ec02-11db-8ab9-001124784c86' date '16 April 2007' time '12:08:48 pm' author 'as' ancestors () stepChildren ())) stepChildren ())) stepChildren ())
