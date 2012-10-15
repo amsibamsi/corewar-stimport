@@ -1,4 +1,14 @@
-(name 'CoreWar-devel-as.28' message 'experimentally switched back to old drawing method, extremely slow, we''ll see ...' id 'b908d836-5a33-11dc-82f6-001124784c86' date '3 September 2007' time '5:38:30 pm' author 'as' ancestors ((name 'CoreWar-devel-as.27' message '- changed logging messages
+(name 'CoreWar-devel-as.29' message '- code cleanup
+- removed current round drawing in windows title (made it very slow)
+- now using draw method with one morph for each cell
+- fixed scrolling partially
+
+todo:
+
+- stop simulation when closing window
+- write more standard programs
+- mars morph does not extend when window is extended
+- scroll bars do not always update' id 'd82dac48-5add-11dc-b588-001124784c86' date '4 September 2007' time '1:56:17 pm' author 'as' ancestors ((name 'CoreWar-devel-as.27' message '- changed logging messages
 - round counter now in title bar of window
 - switched to more oop oriented method of drawing in CWMarsMorph' id '84903c58-5a0a-11dc-a8f4-001124784c86' date '3 September 2007' time '12:43:33 pm' author 'as' ancestors ((name 'CoreWar-devel-as.26' message 'comment fix' id '15d62584-56e0-11dc-93ca-001124784c86' date '30 August 2007' time '12:02:15 pm' author 'as' ancestors ((name 'CoreWar-devel-as.25' message '- removed custom player selection, not used for now
 - added visualization of current round' id '1dcac5a3-56df-11dc-93ca-001124784c86' date '30 August 2007' time '11:55:19 am' author 'as' ancestors ((name 'CoreWar-devel-as.24' message '- 2 more trivial programs
