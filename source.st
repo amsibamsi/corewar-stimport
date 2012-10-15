@@ -1,6 +1,5 @@
 SystemOrganization addCategory: #CoreWar!
 SystemOrganization addCategory: #'CoreWar-Redcode'!
-SystemOrganization addCategory: #'CoreWar-Redcode-Tests'!
 SystemOrganization addCategory: #'CoreWar-Tests'!
 
 Error subclass: #CWMarsException
@@ -45,6 +44,9 @@ Morph subclass: #CWMarsMorph
 	poolDictionaries: ''
 	category: 'CoreWar'!
 
+!CWMarsMorph commentStamp: 'as 8/27/2007 13:57' prior: 0!
+Graphical representation of MARS.!
+
 !CWMarsMorph class methodsFor: 'instance creation' stamp: 'as 8/12/2007 21:09'!
 on: aCWMars
 
@@ -57,20 +59,33 @@ borderSize
 
 	^ 10.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 17:36'!
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/27/2007 14:14'!
 cellGap
 
-	^ 5.! !
+	^ 2.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 17:35'!
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/27/2007 14:14'!
 cellSize
 
-	^ 10.! !
+	^ 5.! !
 
 !CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 17:34'!
 cellsPerRow: cellsCount
 
 	^ (self width / self height * (cellsCount sqrt)) rounded.! !
+
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/27/2007 11:48'!
+coreSize
+
+	| columns x y cellsCount cellSize cellGap borderSize |
+	cellsCount _ mars coreSize.
+	columns _ self cellsPerRow: cellsCount.
+	cellSize _ self cellSize.
+	cellGap _ self cellGap.
+	borderSize _ self borderSize.
+	x _ columns * (cellSize + cellGap) + (2 * borderSize).
+	y _ (cellsCount // columns) * (cellSize + cellGap) + (2 * borderSize).
+	^ x @ y.! !
 
 !CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 19:47'!
 drawOn: aCanvas
@@ -94,7 +109,7 @@ drawOn: aCanvas
 		aCanvas fillRectangle: r color: c.
 	].! !
 
-!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/24/2007 20:01'!
+!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/27/2007 11:49'!
 mars: aCWMars
 
 	mars _ aCWMars.
@@ -105,10 +120,11 @@ neutralColor
 
 	^ Color gray lighter.! !
 
-!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/26/2007 15:39'!
+!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/27/2007 11:29'!
 update: aSymbol
 
-	aSymbol = #core ifTrue: [ self changed. ].! !
+	aSymbol = #core ifTrue: [ self changed. ].
+	aSymbol = #coreSize ifTrue: [ self extent: self coreSize. ].! !
 
 Object subclass: #CWCoreWar
 	instanceVariableNames: 'mars window programs customPrograms players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize logText playerColors simulation'
@@ -116,8 +132,8 @@ Object subclass: #CWCoreWar
 	poolDictionaries: ''
 	category: 'CoreWar'!
 
-!CWCoreWar commentStamp: 'as 4/30/2007 15:58' prior: 0!
-Main application of Core War.!
+!CWCoreWar commentStamp: 'as 8/27/2007 13:57' prior: 0!
+Core War morphic GUI.!
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/23/2007 17:09'!
 abort
@@ -316,7 +332,7 @@ buildLogPanel
 			accept: nil
 	).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/12/2007 21:04'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/27/2007 14:13'!
 buildMarsMorph
 
 	morphs at: #marsMorph put: (
@@ -893,10 +909,10 @@ coreSize
 
 	^ self size.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/20/2007 13:26'!
+!CWMars methodsFor: 'accessing' stamp: 'as 8/27/2007 11:51'!
 coreSize: anInteger
 
-	size _ anInteger.! !
+	self size: anInteger.! !
 
 !CWMars methodsFor: 'defaults' stamp: 'as 4/20/2007 13:09'!
 defaultRounds
@@ -956,29 +972,18 @@ initializeOwnerships
 
 	^ ownerships _ Array new: self size.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 18:50'!
+!CWMars methodsFor: 'private' stamp: 'as 8/27/2007 14:51'!
 internalAddress: anInteger
 
 	"Internally the core is an array with indices from 1 to <size>.
-	 From outside addresses go normally from 0 to size-1."
+	 From outside addresses normally go from 0 to size-1."
 	
 	^ (self coreAddress: anInteger) + 1.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 21:22'!
+!CWMars methodsFor: 'private' stamp: 'as 8/27/2007 14:53'!
 internalValue: anInteger
 
-	| value |
-	anInteger > self maxValue ifTrue: [
-		value _ self maxValue.
-	] ifFalse: [
-		anInteger < self minValue ifTrue: [
-			value_ self minValue.
-		] ifFalse: [
-			value _ anInteger.
-		].
-	].
-	^ value.
-
+	^ (anInteger min: self maxValue) max: self minValue.
 ! !
 
 !CWMars methodsFor: 'private' stamp: 'as 8/26/2007 16:07'!
@@ -1062,7 +1067,7 @@ rounds
 
 	^ rounds ifNil: [ rounds _ self defaultRounds. ].! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/20/2007 13:26'!
+!CWMars methodsFor: 'accessing' stamp: 'as 4/20/2007 13:26'!
 rounds: anInteger
 
 	rounds _ anInteger.! !
@@ -1094,28 +1099,29 @@ run
 	].
 	^ activePlayers.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 8/24/2007 18:50'!
+!CWMars methodsFor: 'accessing' stamp: 'as 8/24/2007 18:50'!
 setPlayers: aCollection
 
 	players _ nil.
 	self players addAll: aCollection.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/19/2007 17:15'!
+!CWMars methodsFor: 'private' stamp: 'as 8/27/2007 13:44'!
 size
 
-	^ size ifNil: [ size _ self defaultSize. ].! !
+	^ size ifNil: [ self size: self defaultSize. size. ].! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/15/2007 21:50'!
+!CWMars methodsFor: 'private' stamp: 'as 8/27/2007 11:52'!
 size: anInteger
 
-	size _ anInteger.! !
+	size _ anInteger.
+	self changed: #coreSize.! !
 
 !CWMars methodsFor: 'accessing' stamp: 'as 4/20/2007 13:08'!
 stepDelay
 
 	^ stepDelay ifNil: [ stepDelay _ self defaultStepDelay. ].! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/20/2007 13:26'!
+!CWMars methodsFor: 'accessing' stamp: 'as 4/20/2007 13:26'!
 stepDelay: anInteger
 
 	stepDelay _ anInteger.! !
@@ -1225,15 +1231,15 @@ encoded: aCollection name: aString
 
 	^ (self encoded: aCollection) name: aString; yourself.! !
 
-!CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/16/2007 19:24'!
+!CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/27/2007 17:54'!
 newRedcodeDwarf
 
 	^ self source: '
-		DAT 0
-		ADD 4 -1
+		DAT #0
+		ADD #4 -1
 		MOV #0 @-2
 		JMP -2'
-	name: 'Dwarf'.! !
+	name: 'Dwarf4'.! !
 
 !CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/17/2007 09:05'!
 newRedcodeImp
@@ -1440,7 +1446,7 @@ symbol
 
 	^ #DAT.! !
 
-!CWRedcodeDataInstruction methodsFor: 'executing' stamp: 'as 8/24/2007 19:32'!
+!CWRedcodeDataInstruction methodsFor: 'executing' stamp: 'as 8/27/2007 17:50'!
 executeOn: mars for: player
 
 	mars write: (operand1 valueOn: mars) at: mars pc for: player.
@@ -1812,7 +1818,7 @@ symbol
 
 	^ #MOV.! !
 
-!CWRedcodeMoveInstruction methodsFor: 'executing' stamp: 'as 8/24/2007 19:33'!
+!CWRedcodeMoveInstruction methodsFor: 'executing' stamp: 'as 8/27/2007 17:47'!
 executeOn: mars for: player
 
 	mars write: (operand1 valueOn: mars) at: (operand2 locationOn: mars) for: player.
@@ -1899,20 +1905,20 @@ initialize
 
 	value _ 0.! !
 
-!CWRedcodeEmptyOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:30'!
+!CWRedcodeEmptyOperand methodsFor: 'executing' stamp: 'as 8/27/2007 17:37'!
 locationOn: mars
 
-	self shouldNotImplement.! !
+	CWRedcodeException signal: 'An empty operand does not have an address'.! !
 
 !CWRedcodeEmptyOperand methodsFor: 'converting' stamp: 'as 4/19/2007 17:12'!
 source
 
 	^ ''.! !
 
-!CWRedcodeEmptyOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:30'!
+!CWRedcodeEmptyOperand methodsFor: 'executing' stamp: 'as 8/27/2007 17:37'!
 valueOn: mars
 
-	self shouldNotImplement.! !
+	CWRedcodeException signal: 'An empty operand does not have a value'.! !
 
 CWRedcodeOperand subclass: #CWRedcodeImmediateOperand
 	instanceVariableNames: ''
@@ -1947,10 +1953,10 @@ symbol
 
 	^ #'#'.! !
 
-!CWRedcodeImmediateOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:31'!
+!CWRedcodeImmediateOperand methodsFor: 'executing' stamp: 'as 8/27/2007 17:36'!
 locationOn: mars
 
-	self shouldNotImplement.! !
+	CWRedcodeException signal: 'A immediate operand does not have an address.'.! !
 
 !CWRedcodeImmediateOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:31'!
 valueOn: mars
@@ -1990,10 +1996,12 @@ symbol
 
 	^ #@.! !
 
-!CWRedcodeIndirectOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:31'!
+!CWRedcodeIndirectOperand methodsFor: 'executing' stamp: 'as 8/27/2007 15:16'!
 locationOn: mars
 
-	^ mars read: mars pc + value.! !
+	| address |
+	address _ mars pc + value.
+	^ address + (mars read: address).! !
 
 !CWRedcodeIndirectOperand methodsFor: 'executing' stamp: 'as 4/26/2007 14:30'!
 valueOn: mars
@@ -2290,7 +2298,7 @@ TestCase subclass: #CWRedcodeInstructionTest
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'CoreWar-Redcode-Tests'!
+	category: 'CoreWar-Tests'!
 
 !CWRedcodeInstructionTest commentStamp: 'as 4/18/2007 10:27' prior: 0!
 Test Redcode instructions.!
@@ -2401,7 +2409,7 @@ TestCase subclass: #CWRedcodeOperandTest
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'CoreWar-Redcode-Tests'!
+	category: 'CoreWar-Tests'!
 
 !CWRedcodeOperandTest commentStamp: 'as 4/18/2007 10:26' prior: 0!
 Test Redcode operands.!
@@ -2422,7 +2430,7 @@ TestCase subclass: #CWRedcodeTest
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
-	category: 'CoreWar-Redcode-Tests'!
+	category: 'CoreWar-Tests'!
 
 !CWRedcodeTest commentStamp: 'as 4/20/2007 08:14' prior: 0!
 Test Redcode.!
