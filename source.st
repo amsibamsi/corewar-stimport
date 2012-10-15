@@ -213,22 +213,22 @@ Object subclass: #CWMars
 !CWMars commentStamp: 'as 4/16/2007 11:51' prior: 0!
 Memory Array Redcode Simulator - the Core War interpreter.!
 
-!CWMars class methodsFor: 'core' stamp: 'as 4/19/2007 17:01'!
+!CWMars class methodsFor: 'core' stamp: 'as 4/26/2007 21:20'!
 maxValue
 
-	^ self valueSize - 1.! !
+	^ self valueSize / 2.! !
 
-!CWMars class methodsFor: 'core' stamp: 'as 4/19/2007 17:01'!
+!CWMars class methodsFor: 'core' stamp: 'as 4/26/2007 21:20'!
 minValue
 
-	^ 0.! !
+	^ self maxValue negative + 1.! !
 
-!CWMars class methodsFor: 'limits' stamp: 'as 4/18/2007 17:11'!
+!CWMars class methodsFor: 'limits' stamp: 'as 4/26/2007 21:19'!
 valueBits
 
-	^ CWRedcodeInstruction encodingBits.! !
+	^ CWRedcodeInstruction encodingBits + 1.! !
 
-!CWMars class methodsFor: 'limits' stamp: 'as 4/18/2007 23:14'!
+!CWMars class methodsFor: 'limits' stamp: 'as 4/26/2007 21:19'!
 valueSize
 
 	^ 2 raisedTo: self valueBits.! !
@@ -237,6 +237,22 @@ valueSize
 addProgram: aCWRedcode
 
 	self programs add: aCWRedcode.! !
+
+!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 18:48'!
+coreAddress: anInteger
+
+	"The address space is interpreted as ring, so out of bounds
+	 addresses are not possible."
+	
+	| address |
+	
+	"Divide modulo for addresses that are out of bounds."
+	address _ anInteger \\ self coreSize.
+	
+	"Convert negative addresses."
+	address negative ifTrue: [ address _ self coreSize - address. ].
+	
+	^ address.! !
 
 !CWMars methodsFor: 'accessing' stamp: 'as 4/26/2007 11:57'!
 coreSize
@@ -263,15 +279,22 @@ defaultStepDelay
 
 	^ 100.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/20/2007 14:21'!
+!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 18:59'!
 freeCoreRange: anInteger
 
-	"| start free address |
-	start _ self core atRandom.
-	1 to: self coreSize do: [
+	| start free address |
+	start _ self coreSize atRandom.
+	1 to: self coreSize - anInteger do: [
 		:count |
+		address _ start + count.
 		free _ true.
-		0 to: anInteger do: ["
+		0 to: anInteger - 1 do: [
+			:offset |
+			free _ free and: [ (self owner: (address + offset)) isNil. ].
+		].
+		free ifTrue: [ ^ self coreAddress: address. ].
+	].
+	^ nil.
 			! !
 
 !CWMars methodsFor: 'initialize-release' stamp: 'as 4/26/2007 10:53'!
@@ -294,28 +317,15 @@ initializeOwnerships
 
 	^ ownerships _ Array new: self size.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/18/2007 23:09'!
+!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 18:50'!
 internalAddress: anInteger
 
 	"Internally the core is an array with indices from 1 to <size>.
-	 From outside addresses go normally from 0 to size-1.
-	 The address space is interpreted as ring, so out of bounds
-	 addresses are not possible."
+	 From outside addresses go normally from 0 to size-1."
 	
-	| address |
-	
-	"Divide modulo for addresses that are out of bounds."
-	address _ anInteger \\ self coreSize.
-	
-	"Convert negative addresses."
-	address negative ifTrue: [ address _ self coreSize - address. ].
-	
-	"Internal addressing starts with 1, not 0."
-	address + 1.
-	
-	^ address.! !
+	^ (self coreAddress: anInteger) + 1.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/18/2007 23:12'!
+!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 21:22'!
 internalValue: anInteger
 
 	| value |
@@ -328,9 +338,11 @@ internalValue: anInteger
 			value _ anInteger.
 		].
 	].
-	^ value.! !
+	^ value.
 
-!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 11:15'!
+! !
+
+!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 18:52'!
 loadProgram: aCWRedcode
 
 	| start |
@@ -351,7 +363,7 @@ loadPrograms
 	].
 	pc _ counters at: programs first.! !
 
-!CWMars methodsFor: 'core' stamp: 'as 4/18/2007 23:09'!
+!CWMars methodsFor: 'core' stamp: 'as 4/26/2007 21:26'!
 maxValue
 
 	^ self class maxValue.! !
@@ -366,7 +378,7 @@ owner: integerAddress
 
 	^ ownerships at: (self internalAddress: integerAddress).! !
 
-!CWMars methodsFor: 'core' stamp: 'as 4/26/2007 12:01'!
+!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 12:01'!
 owner: aCWRedcode at: integerAddress
 
 	^ ownerships at: (self internalAddress: integerAddress) put: aCWRedcode.! !
@@ -381,10 +393,10 @@ programs
 
 	^ programs ifNil: [ programs _ OrderedCollection new. ].! !
 
-!CWMars methodsFor: 'initialize-release' stamp: 'as 4/26/2007 10:52'!
+!CWMars methodsFor: 'initialize-release' stamp: 'as 4/26/2007 21:25'!
 randomValue
 
-	^ (self maxValue + 1) atRandom - 1.! !
+	^ self valueSize atRandom - self maxValue.! !
 
 !CWMars methodsFor: 'core' stamp: 'as 4/26/2007 11:57'!
 read: integerAddress
@@ -406,7 +418,7 @@ rounds: anInteger
 
 	rounds _ anInteger.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/26/2007 14:05'!
+!CWMars methodsFor: 'public' stamp: 'as 4/26/2007 19:02'!
 run
 
 	| players instruction counter |
@@ -422,9 +434,9 @@ run
 			pc _ counters at: player.
 			[
 				instruction _ CWRedcodeInstruction encoded: (self read: pc).
-				ownerships at: pc put: player.
+				self owner: player at: pc.
 				counter _ instruction executeOn: self for: player.
-				counter _ self internalAddress: counter.
+				counter _ self coreAddress: counter.
 				counters at: player put: counter.
 			]
 				on: CWRedcodeDecodeException
@@ -457,14 +469,21 @@ stepDelay: anInteger
 
 	stepDelay _ anInteger.! !
 
-!CWMars methodsFor: 'core' stamp: 'as 4/26/2007 11:57'!
+!CWMars methodsFor: 'limits' stamp: 'as 4/26/2007 21:26'!
+valueSize
+
+	^ self class valueSize.! !
+
+!CWMars methodsFor: 'core' stamp: 'as 4/26/2007 21:21'!
 write: valueInteger at: integerAddress for: aCWRedcode
 
 	"Write value at the specified address."
 	
-	core at: (self internalAddress: integerAddress) put: (self internalValue: valueInteger).
+	| value |
+	value _ self internalValue: valueInteger.
+	core at: (self internalAddress: integerAddress) put: value.
 	self owner: aCWRedcode at: integerAddress.
-	^ self internalValue: valueInteger.! !
+	^ value.! !
 
 Object subclass: #CWRedcode
 	instanceVariableNames: 'lines'
