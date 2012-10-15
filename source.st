@@ -73,13 +73,13 @@ cellGap
 
 	^ self cellSize // 2.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/28/2007 13:26'!
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/30/2007 11:43'!
 cellRectangle: aNumber
 
 	| columns x y r |
 	columns _ self cellsPerRow.
 	x _ (aNumber \\ columns) * (self cellSize + self cellGap) + self borderSize.
-	y _ (aNumber // columns) * (self cellSize + self cellGap) + self borderSize.
+	y _ (aNumber // columns) * (self cellSize + self cellGap) + self borderSize + self topBorder.
 	r _ (self bounds left + x) @ (self bounds top + y) extent: self cellSize @ self cellSize.
 	^ r.! !
 
@@ -99,33 +99,31 @@ cellsPerRow
 
 	^ (self width / self height * (mars coreSize sqrt)) rounded.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/28/2007 13:48'!
-coreSize
-
-	| x y |
-	x _ self cellsPerRow * (self cellSize + self cellGap) + (2 * self borderSize).
-	y _ (mars coreSize // self cellsPerRow) * (self cellSize + self cellGap) + (2 * self borderSize).
-	^ x @ y.! !
-
 !CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/29/2007 14:54'!
 defaultCellSize
 
 	^ 7.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/28/2007 13:53'!
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/30/2007 11:48'!
 drawOn: aCanvas
 
 	"Clear canvas"
 	aCanvas fillRectangle: self bounds fillStyle: self fillStyle borderStyle: self borderStyle.
 	
-	"Draw cell ownerships"
 	0 to: mars coreSize - 1 do: [
 		:index |
-		| r c |
-		r _ self cellRectangle: index.
-		c _ (mars color: index) ifNil: [ self neutralColor. ].
-		aCanvas fillRectangle: r color: c.
-	].! !
+		self drawRect: index on: aCanvas.
+	].
+	aCanvas
+		drawString: 'Round ', mars currentRound asString, ' of ', mars rounds asString
+		at: self bounds topLeft + (self borderSize @ self borderSize)! !
+
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/30/2007 11:38'!
+drawRect: index on: aCanvas
+
+	aCanvas
+		fillRectangle: (self cellRectangle: index)
+		color: ((mars color: index) ifNil: [ self neutralColor. ]).! !
 
 !CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/27/2007 11:49'!
 mars: aCWMars
@@ -138,13 +136,18 @@ neutralColor
 
 	^ Color gray lighter.! !
 
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/30/2007 11:43'!
+topBorder
+
+	^ 25.! !
+
 !CWMarsMorph methodsFor: 'updating' stamp: 'as 8/29/2007 15:00'!
 update: aSymbol
 
 	aSymbol = #core ifTrue: [ self changed. ].! !
 
 Object subclass: #CWCoreWar
-	instanceVariableNames: 'mars window programs customPrograms players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize logText playerColors simulation rounds'
+	instanceVariableNames: 'mars window programs players morphs selectedProgramIndex selectedPlayerIndex coreSize logText playerColors simulation rounds'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
@@ -161,24 +164,15 @@ abort
 		simulation _ nil.
 	].! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:08'!
-addCustomProgram
-
-	self shouldBeImplemented.! !
-
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 20:02'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/30/2007 11:09'!
 addPlayer
 
-	| program customProgram player color |
-	program _ customProgram _ nil.
-	self isProgramSelected ifTrue: [ program _ programs at: selectedProgramIndex. ].
-	self isCustomProgramSelected ifTrue:
-		[ customProgram _ programs at: selectedCustomProgramIndex. ].
-	player _ program ifNil: [ customProgram. ].
-	player ifNotNil: [
+	| program color |
+	program _ programs at: selectedProgramIndex ifAbsent: [ nil. ].
+	program ifNotNil: [
 		color _ self findLeastUsedPlayerColor.
 		self addPlayerColor: color.
-		players add: (CWPlayer program: player color: color).
+		players add: (CWPlayer program: program color: color).
 		self refreshPlayerSelection.
 		self changed: #players.
 	].! !
@@ -275,71 +269,6 @@ buildCoreSizeOption
 			fullFrame: (LayoutFrame fractions: (0.5 @ 0 corner: 0.5 @ 0)
 				offsets: (0 @ 0 corner: self buttonWidth * 3 @ self buttonHeight)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 14:28'!
-buildCustomProgramSelection
-
-	^ Morph new
-		color: Color transparent;
-		layoutPolicy: ProportionalLayout new;
-		addMorph: self buildCustomProgramSelectionButtons
-			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0 @ 0)
-				offsets: (0 @ 0 corner: (self buttonWidth) @ (self buttonHeight * 3)));
-		addMorph: self buildCustomProgramSelectionList
-			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 1)
-				offsets: (self buttonWidth @ 0 corner: 0 @ 0)).! !
-
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:04'!
-buildCustomProgramSelectionButtons
-
-	morphs at: #addCustomProgramButton put: (
-		(self
-			buildButtonOn: self
-			getState: #offButtonState
-			action: #addCustomProgram
-			label: '+')
-		setBalloonText: 'Add a custom program'
-	).
-	morphs at: #removeCustomProgramButton put: (
-		(self
-			buildButtonOn: self
-			getState: #offButtonState
-			action: #removeCustomProgram
-			label: '-')
-		setBalloonText: 'Remove selected custom program'
-	).
-	morphs at: #editCustomProgramButton put: (
-		(self
-			buildButtonOn: self
-			getState: #offButtonState
-			action: #editCustomProgram
-			label: 'e')
-		setBalloonText: 'Edit selected custom program'
-	).
-	^ Morph new
-		color: Color transparent;
-		layoutPolicy: ProportionalLayout new;
-		layoutInset: 1;
-		addMorph: (morphs at: #addCustomProgramButton)
-			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ (1/3)));
-		addMorph: (morphs at: #removeCustomProgramButton)
-			fullFrame: (LayoutFrame fractions: (0 @ (1/3) corner: 1 @ (2/3)));
-		addMorph: (morphs at: #editCustomProgramButton)
-			fullFrame: (LayoutFrame fractions: (0 @ (2/3) corner: 1 @ 1)).! !
-
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:04'!
-buildCustomProgramSelectionList
-
-	^ morphs at: #customProgramSelectionList put: (
-		(PluggableListMorph
-			on: self
-			list: #customPrograms
-			selected: #selectedCustomProgramIndex
-			changeSelected: #selectCustomProgramIndex:)
-		setBalloonText: 'Custom programs';
-		borderWidth: 1;
-		borderColor: Color gray muchLighter
-	).! !
-
 !CWCoreWar methodsFor: 'window-building' stamp: 'as 8/22/2007 01:00'!
 buildDelayOption
 
@@ -397,22 +326,20 @@ buildOptionsPanel
 		addMorph: self buildCellSizeOption
 			fullFrame: (LayoutFrame fractions: (0 @ 0.8 corner: 1 @ 1)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:42'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/30/2007 10:55'!
 buildPlayerPanel
 
 	^ Morph new
 		color: Color transparent;
 		layoutPolicy: ProportionalLayout new;
 		addMorph: self buildProgramSelection
-			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 0.3));
-		addMorph: self buildCustomProgramSelection
-			fullFrame: (LayoutFrame fractions: (0 @ 0.3 corner: 1 @ 0.6));
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 0.5));
 		addMorph: self buildAddRemovePlayerButtons
-			fullFrame: (LayoutFrame fractions: (0 @ 0.6 corner: 0 @ 0.6)
+			fullFrame: (LayoutFrame fractions: (0 @ 0.5 corner: 0 @ 0.5)
 				offsets: (self buttonWidth @ 0
 					corner: self buttonWidth * 3 @ self buttonHeight));
 		addMorph: self buildPlayerSelection
-			fullFrame: (LayoutFrame fractions: (0 @ 0.6 corner: 1 @ 1)
+			fullFrame: (LayoutFrame fractions: (0 @ 0.5 corner: 1 @ 1)
 				offsets: (0 @ self buttonHeight corner: 0 @ 0)).! !
 
 !CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:44'!
@@ -493,7 +420,7 @@ buildProgramSelection
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 1)
 				offsets: (self buttonWidth @ 0 corner: 0 @ 0)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:05'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/30/2007 11:13'!
 buildProgramSelectionButtons
 
 	morphs at: #refreshProgramsButton put: (
@@ -502,7 +429,7 @@ buildProgramSelectionButtons
 			getState: #offButtonState
 			action: #refreshPrograms
 			label: 'r')
-		setBalloonText: 'Refresh standard programs list'
+		setBalloonText: 'Refresh programs list'
 	).
 	^ Morph new
 		color: Color transparent;
@@ -511,7 +438,7 @@ buildProgramSelectionButtons
 		addMorph: (morphs at: #refreshProgramsButton)
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ (1/3))).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:05'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/30/2007 11:13'!
 buildProgramSelectionList
 
 	^ morphs at: #programSelectionList put: (
@@ -520,7 +447,7 @@ buildProgramSelectionList
 			list: #programs
 			selected: #selectedProgramIndex
 			changeSelected: #selectProgramIndex:)
-		setBalloonText: 'Standard programs';
+		setBalloonText: 'Available programs';
 		borderWidth: 1;
 		borderColor: Color gray muchLighter
 	).! !
@@ -661,11 +588,6 @@ delayText: aText
 	self changed: #delayText.
 	^ true.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:08'!
-editCustomProgram
-
-	self shouldBeImplemented.! !
-
 !CWCoreWar methodsFor: 'view' stamp: 'as 8/17/2007 09:32'!
 findLeastUsedPlayerColor
 
@@ -678,14 +600,14 @@ findLeastUsedPlayerColor
 	].
 	^ color key.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/29/2007 17:19'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/30/2007 11:04'!
 initialize
 
 	mars _ CWMars new.
 	mars addDependent: self.
 	players _ OrderedCollection new.
 	morphs _ Dictionary new.
-	selectedProgramIndex _ selectedCustomProgramIndex _ selectedPlayerIndex _ 0.
+	selectedProgramIndex _ selectedPlayerIndex _ 0.
 	coreSize _ mars defaultSize.
 	rounds _ mars defaultRounds.
 	self initializePrograms.
@@ -814,13 +736,6 @@ programs
 
 	^ programs.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 20:11'!
-refreshCustomProgramSelection
-
-	selectedCustomProgramIndex _
-		self selectedCustomProgramIndex min: customPrograms size max: 0.
-	self changed: #selectCustomProgramIndex.! !
-
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 20:10'!
 refreshPlayerSelection
 
@@ -839,11 +754,6 @@ refreshPrograms
 	self initializePrograms.
 	self refreshProgramSelection.
 	self changed: #programs.! !
-
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:09'!
-removeCustomProgram
-
-	self shouldBeImplemented.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 17:01'!
 removePlayer
@@ -897,30 +807,17 @@ runPause
 		].
 	].! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
-selectCustomProgramIndex: aNumber
-
-	selectedCustomProgramIndex _ aNumber.
-	self changed: #selectedCustomProgramIndex.
-	self unselectProgram.! !
-
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 11:59'!
 selectPlayerIndex: aNumber
 
 	selectedPlayerIndex _ aNumber.
 	self changed: #selectedPlayerIndex.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/30/2007 11:02'!
 selectProgramIndex: aNumber
 
 	selectedProgramIndex _ aNumber.
-	self changed: #selectedProgramIndex.
-	self unselectCustomProgram.! !
-
-!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/18/2007 11:43'!
-selectedCustomProgramIndex
-
-	^ selectedCustomProgramIndex.! !
+	self changed: #selectedProgramIndex.! !
 
 !CWCoreWar methodsFor: 'accessing' stamp: 'as 8/18/2007 11:43'!
 selectedPlayerIndex
@@ -947,23 +844,11 @@ simulate
 	].
 	simulation _ nil.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
-unselectCustomProgram
-
-	selectedCustomProgramIndex _ 0.
-	self changed: #selectedCustomProgramIndex.! !
-
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:06'!
 unselectPlayer
 
 	selectedPlayerIndex _ 0.
 	self changed: #selectedPlayerIndex.! !
-
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
-unselectProgram
-
-	selectedProgramIndex _ 0.
-	self changed: #selectedProgramIndex.! !
 
 !CWCoreWar methodsFor: 'updating' stamp: 'as 8/29/2007 17:15'!
 update: aSymbol with: anObject
@@ -978,7 +863,7 @@ windowColor
 	^ Color orange lighter.! !
 
 Object subclass: #CWMars
-	instanceVariableNames: 'core ownerships players pc counters size stepDelay rounds'
+	instanceVariableNames: 'core ownerships players pc counters size stepDelay rounds currentRound'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
@@ -1043,6 +928,17 @@ coreSize: anInteger
 counters
 
 	^ counters.! !
+
+!CWMars methodsFor: 'public' stamp: 'as 8/30/2007 11:49'!
+currentRound
+
+	^ currentRound ifNil: [ 0. ].! !
+
+!CWMars methodsFor: 'private' stamp: 'as 8/30/2007 11:50'!
+currentRound: aNumber
+
+	currentRound _ aNumber.
+	self changed: #currentRound.! !
 
 !CWMars methodsFor: 'defaults' stamp: 'as 4/20/2007 13:09'!
 defaultRounds
@@ -1202,7 +1098,7 @@ rounds: anInteger
 
 	rounds _ anInteger.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 8/29/2007 23:46'!
+!CWMars methodsFor: 'public' stamp: 'as 8/30/2007 11:49'!
 run
 
 	| activePlayers instruction counter |
@@ -1210,6 +1106,7 @@ run
 	activePlayers _ self players copy.
 	1 to: self rounds do: [
 		:round |
+		self currentRound: round.
 		activePlayers do: [
 			:player |
 			pc _ counters at: player.
