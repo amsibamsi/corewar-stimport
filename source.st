@@ -128,12 +128,13 @@ Object subclass: #CWRedcode
 A Core War program in Redcode language.
 This is a object representation of a Redcode program. It can either be build from source code (string) or binary code (integers).!
 
-!CWRedcode class methodsFor: 'instance creation' stamp: 'as 4/17/2007 19:38'!
+!CWRedcode class methodsFor: 'instance creation' stamp: 'as 4/18/2007 10:12'!
 fromIntegers: aCollection
 
-	"Initialize the program from binary (integers) code (disassembling)."
+	"Initialize the program from binary code."
 
 	| program |
+	aCollection isEmpty ifTrue: [ CWRedcodeSyntaxException signal: 'Empty source'. ].
 	program _ self new.
 	aCollection do: [
 		:integer |
@@ -141,17 +142,22 @@ fromIntegers: aCollection
 	].
 	^ program.! !
 
-!CWRedcode class methodsFor: 'instance creation' stamp: 'as 4/17/2007 19:36'!
+!CWRedcode class methodsFor: 'instance creation' stamp: 'as 4/18/2007 11:27'!
 fromString: aString
 
-	"Initialize the program from source code (assembling)."
+	"Initialize the program from source code."
 
-	| program source |
+	| program source count |
+	aString isEmpty ifTrue: [ CWRedcodeSyntaxException signal: 'Empty source'. ].
 	program _ self new.
-	source _ aString withSeparatorsCompacted.
+	source _ aString withBlanksCondensed.
+	count _ 1.
 	source linesDo: [
 		:line |
-		program addLine: (CWRedcodeInstruction fromString: line).
+		[ program addLine: (CWRedcodeInstruction fromString: line) ]
+			on: CWRedcodeSyntaxException
+			do: [ :ex | CWRedcodeSyntaxException signal: 'In line ', count asString, ': ', ex messageText. ].
+		count _ count + 1.
 	].
 	^ program.! !
 
@@ -160,23 +166,38 @@ addLine: aCWRedcodeInstruction
 
 	self lines add: aCWRedcodeInstruction.! !
 
-!CWRedcode methodsFor: 'converting' stamp: 'as 4/17/2007 19:33'!
+!CWRedcode methodsFor: 'converting' stamp: 'as 4/17/2007 19:58'!
+asBinaryString
+
+	| string |
+	string _ String new.
+	self asIntegers do: [
+		:integer |
+		string _ string, (integer printStringRadix: 2), String cr.
+	].
+	^ string.! !
+
+!CWRedcode methodsFor: 'converting' stamp: 'as 4/18/2007 11:24'!
 asIntegers
 
-	| array |
-	array _ OrderedCollection new.
+	| collection |
+	collection _ OrderedCollection new.
 	self lines doWithIndex: [
 		:line :index |
-		array add: line asInteger.
+		collection add: line asInteger.
 	].
-	^ array.! !
+	^ collection.! !
 
-!CWRedcode methodsFor: 'converting' stamp: 'as 4/17/2007 15:54'!
+!CWRedcode methodsFor: 'converting' stamp: 'as 4/18/2007 11:41'!
 asString
 
-	"Return the source code of the program."
-
-	self notYetImplemented.! !
+	| string |
+	string _ String new.
+	self lines do: [
+		:line |
+		string _ string, line asString, String cr.
+	].
+	^ string withBlanksCondensed.! !
 
 !CWRedcode methodsFor: 'accessing' stamp: 'as 4/17/2007 15:52'!
 lines
@@ -207,7 +228,7 @@ encoding
 
 	^ 2.! !
 
-!CWRedcodeAddInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 08:26'!
+!CWRedcodeAddInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 08:26'!
 symbol
 
 	^ #ADD.! !
@@ -227,7 +248,7 @@ encoding
 
 	^ 7.! !
 
-!CWRedcodeCompareInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:08'!
+!CWRedcodeCompareInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:08'!
 symbol
 
 	^ #CMP.! !
@@ -238,15 +259,20 @@ CWRedcodeInstruction subclass: #CWRedcodeDataInstruction
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeDataInstruction commentStamp: 'as 4/17/2007 18:35' prior: 0!
-DAT A B - Initialize location to value B.!
+!CWRedcodeDataInstruction commentStamp: 'as 4/18/2007 10:31' prior: 0!
+DAT A - Initialize location to value A.!
 
 !CWRedcodeDataInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:28'!
 encoding
 
 	^ 0.! !
 
-!CWRedcodeDataInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 08:22'!
+!CWRedcodeDataInstruction class methodsFor: 'testing' stamp: 'as 4/18/2007 10:17'!
+hasSecondOperand
+
+	^ false.! !
+
+!CWRedcodeDataInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 08:22'!
 symbol
 
 	^ #DAT.! !
@@ -265,7 +291,7 @@ encoding
 
 	^ 6.! !
 
-!CWRedcodeDecrementJumpZeroInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:06'!
+!CWRedcodeDecrementJumpZeroInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:06'!
 symbol
 
 	^ #DJZ.! !
@@ -293,16 +319,40 @@ encoding
 
 	self subclassResponsibility.! !
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 12:51'!
-fromString: aString
+!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 19:44'!
+fromInteger: anInteger
 
 	| instruction tokens |
 	instruction _ self new.
-	tokens _ self tokensFor: aString.
+	tokens _ self tokensFor: anInteger.
 	instruction _ self instructionForString: (tokens at: 1).
 	instruction operand1: (CWRedcodeOperand fromString: (tokens at: 2)).
 	instruction operand2: (CWRedcodeOperand fromString: (tokens at: 3)).
 	^ instruction.! !
+
+!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/18/2007 11:27'!
+fromString: aString
+
+	| instruction tokens rest |
+	instruction _ self new.
+	tokens _ self tokensFor: aString.
+	instruction _ self instructionForString: (tokens at: 1).
+	instruction operand1: (CWRedcodeOperand fromString: (tokens at: 2)).
+	instruction hasSecondOperand ifTrue: [
+		instruction operand2: (CWRedcodeOperand fromString: (tokens at: 3)).
+		rest _ tokens at: 4.
+	] ifFalse: [
+		instruction operand2: (CWRedcodeEmptyOperand new).
+		rest _ (tokens at: 3), (tokens at: 4).
+	].
+	rest isEmpty ifFalse:
+		[ CWRedcodeSyntaxException signal: 'Expected end of line instead of "', rest, '"'. ].
+	^ instruction.! !
+
+!CWRedcodeInstruction class methodsFor: 'testing' stamp: 'as 4/18/2007 10:16'!
+hasSecondOperand
+
+	^ true.! !
 
 !CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 14:12'!
 instructionForString: aString
@@ -313,7 +363,7 @@ instructionForString: aString
 	].
 	CWRedcodeSyntaxException signal: '"', aString, '" is not a valid instruction'.! !
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/16/2007 16:31'!
+!CWRedcodeInstruction class methodsFor: 'converting' stamp: 'as 4/16/2007 16:31'!
 symbol
 
 	"The mnemonic symbol used in Redcode source for this instruction
@@ -321,13 +371,13 @@ symbol
 
 	self subclassResponsibility.! !
 
-!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 17:05'!
+!CWRedcodeInstruction class methodsFor: 'instance creation' stamp: 'as 4/18/2007 10:53'!
 tokensFor: aString
 
 	| tokens stream |
 	tokens _ OrderedCollection new.
 	stream _ ReadStream on: aString, ' '.
-	3 timesRepeat: [
+	4 timesRepeat: [
 		tokens add: (stream nextDelimited: ' ' asCharacter).
 	].
 	^ tokens.! !
@@ -344,6 +394,11 @@ asInteger
 		operand1 asInteger * self operand1Radix +
 		operand2 asInteger * self operand2Radix.! !
 
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/18/2007 11:32'!
+asString
+
+	^ (self symbol asString, ' ', operand1 asString, ' ', operand2 asString) withBlanksCondensed.! !
+
 !CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 11:25'!
 encoding
 
@@ -356,15 +411,20 @@ executeOn: aCWMars
 	
 	self subclassResponsibility.! !
 
+!CWRedcodeInstruction methodsFor: 'testing' stamp: 'as 4/18/2007 10:16'!
+hasSecondOperand
+
+	^ self class hasSecondOperand.! !
+
 !CWRedcodeInstruction methodsFor: 'accessing' stamp: 'as 4/16/2007 16:10'!
 operand1: aCWRedcodeOperand
 
 	operand1 _ aCWRedcodeOperand.! !
 
-!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 18:49'!
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/17/2007 19:41'!
 operand1Radix
 
-	^ (self allInstructions size log: 2) rounded.! !
+	^ 2 raisedTo: (self allInstructions size log: 2) ceiling.! !
 
 !CWRedcodeInstruction methodsFor: 'accessing' stamp: 'as 4/16/2007 16:10'!
 operand2: aCWRedcodeOperand
@@ -376,21 +436,31 @@ operand2Radix
 
 	^ self operand1Radix * operand1 radix.! !
 
+!CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/18/2007 11:31'!
+symbol
+
+	^ self class symbol.! !
+
 CWRedcodeInstruction subclass: #CWRedcodeJumpInstruction
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeJumpInstruction commentStamp: 'as 4/17/2007 18:35' prior: 0!
-JMP A B - Jump to location B.!
+!CWRedcodeJumpInstruction commentStamp: 'as 4/18/2007 10:31' prior: 0!
+JMP A - Jump to location A.!
 
 !CWRedcodeJumpInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:29'!
 encoding
 
 	^ 4.! !
 
-!CWRedcodeJumpInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:23'!
+!CWRedcodeJumpInstruction class methodsFor: 'testing' stamp: 'as 4/18/2007 10:17'!
+hasSecondOperand
+
+	^ false.! !
+
+!CWRedcodeJumpInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:23'!
 symbol
 
 	^ #JMP.! !
@@ -409,7 +479,7 @@ encoding
 
 	^ 5.! !
 
-!CWRedcodeJumpZeroInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:04'!
+!CWRedcodeJumpZeroInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 11:04'!
 symbol
 
 	^ #JMZ.! !
@@ -428,7 +498,7 @@ encoding
 
 	^ 1.! !
 
-!CWRedcodeMoveInstruction class methodsFor: 'instance creation' stamp: 'as 4/16/2007 16:43'!
+!CWRedcodeMoveInstruction class methodsFor: 'converting' stamp: 'as 4/16/2007 16:43'!
 symbol
 
 	^ #MOV.! !
@@ -447,7 +517,7 @@ encoding
 
 	^ 2.! !
 
-!CWRedcodeSubtractInstruction class methodsFor: 'instance creation' stamp: 'as 4/17/2007 08:28'!
+!CWRedcodeSubtractInstruction class methodsFor: 'converting' stamp: 'as 4/17/2007 08:28'!
 symbol
 
 	^ #SUB.! !
@@ -462,6 +532,40 @@ Object subclass: #CWRedcodeOperand
 An operand of a Redcode instruction.
 New operands must be registered in self>>allOperands to be recognized during build from source or binary code.!
 
+CWRedcodeOperand subclass: #CWRedcodeEmptyOperand
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeEmptyOperand commentStamp: 'as 4/18/2007 10:22' prior: 0!
+A placeholder for instructions that use just one operand.!
+
+!CWRedcodeEmptyOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 10:30'!
+encoding
+
+	^ 3.! !
+
+!CWRedcodeEmptyOperand class methodsFor: 'instance creation' stamp: 'as 4/18/2007 10:34'!
+fromString: aString
+
+	self shouldNotImplement.! !
+
+!CWRedcodeEmptyOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 11:38'!
+symbol
+
+	^ #''.! !
+
+!CWRedcodeEmptyOperand class methodsFor: 'instance creation' stamp: 'as 4/18/2007 11:38'!
+valueRegex
+
+	^ ''.! !
+
+!CWRedcodeEmptyOperand methodsFor: 'initialize-release' stamp: 'as 4/18/2007 10:35'!
+initialize
+
+	value _ 0.! !
+
 CWRedcodeOperand subclass: #CWRedcodeImmediateOperand
 	instanceVariableNames: ''
 	classVariableNames: ''
@@ -471,6 +575,11 @@ CWRedcodeOperand subclass: #CWRedcodeImmediateOperand
 !CWRedcodeImmediateOperand commentStamp: 'as 4/17/2007 01:30' prior: 0!
 String representation: #<number>. The operand is <number>.!
 
+!CWRedcodeImmediateOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 10:29'!
+encoding
+
+	^ 0.! !
+
 !CWRedcodeImmediateOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 21:57'!
 fromString: aString
 
@@ -478,15 +587,10 @@ fromString: aString
 		value: (aString copyFrom: 2 to: aString size) asInteger;
 		yourself.! !
 
-!CWRedcodeImmediateOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 21:15'!
-startCharacters
+!CWRedcodeImmediateOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 11:37'!
+symbol
 
-	^ '#'.! !
-
-!CWRedcodeImmediateOperand methodsFor: 'converting' stamp: 'as 4/17/2007 08:11'!
-encoding
-
-	^ 0.! !
+	^ #'#'.! !
 
 CWRedcodeOperand subclass: #CWRedcodeIndirectOperand
 	instanceVariableNames: ''
@@ -497,6 +601,11 @@ CWRedcodeOperand subclass: #CWRedcodeIndirectOperand
 !CWRedcodeIndirectOperand commentStamp: 'as 4/17/2007 01:33' prior: 0!
 String representation: @<number>. Like a relative operand but the resulting operand is interpreted as address where the real operand resides.!
 
+!CWRedcodeIndirectOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 10:30'!
+encoding
+
+	^ 2.! !
+
 !CWRedcodeIndirectOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 23:29'!
 fromString: aString
 
@@ -504,17 +613,12 @@ fromString: aString
 		value: (aString copyFrom: 2 to: aString size) asInteger;
 		yourself.! !
 
-!CWRedcodeIndirectOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 23:22'!
-startCharacters
+!CWRedcodeIndirectOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 11:37'!
+symbol
 
-	^ '@'.! !
+	^ #@.! !
 
-!CWRedcodeIndirectOperand methodsFor: 'converting' stamp: 'as 4/17/2007 08:12'!
-encoding
-
-	^ 2.! !
-
-!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/17/2007 11:18'!
+!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/18/2007 10:20'!
 allOperands
 
 	"A set of operands allowed in this language."
@@ -523,15 +627,23 @@ allOperands
 		add: CWRedcodeImmediateOperand;
 		add: CWRedcodeRelativeOperand;
 		add: CWRedcodeIndirectOperand;
+		add: CWRedcodeEmptyOperand;
 		yourself.! !
 
-!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/17/2007 14:12'!
+!CWRedcodeOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 10:29'!
+encoding
+
+	"All operands must be sequentially numbered with an integer for integer encoding."
+
+	^ self subclassResponsibility.! !
+
+!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/18/2007 10:47'!
 fromString: aString
 
-	aString ifEmpty: [ CWRedcodeSyntaxException signal: 'Empty operand'. ].
+	aString ifEmpty: [ CWRedcodeSyntaxException signal: 'Operand is empty'. ].
 	self allOperands do: [
 		:class |
-		(class startCharacters includes: aString first)
+		(aString matchesRegex: class valueRegex)
 			ifTrue: [ ^ class fromString: aString. ].
 	].
 	CWRedcodeSyntaxException signal: '"', aString, '" is not a valid operand'.! !
@@ -543,13 +655,13 @@ fromString: aString max: anInteger
 		max: anInteger;
 		yourself.! !
 
-!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 21:13'!
-startCharacters
+!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/18/2007 11:34'!
+valueRegex
 
-	"Should return a string whose characters can all be used as
-	 starting character of the value to initialize an instance from."
+	"Should return a regular expression as documented in RxParser that
+	 is used to verify the string value before initializing an instance from."
 
-	self subclassResponsibility.! !
+	^ self symbol asString, '-?[0-9]+'.! !
 
 !CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/17/2007 19:27'!
 allOperands
@@ -562,17 +674,20 @@ asInteger
 	^ self encoding +
 		value * self valueRadix.! !
 
+!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/18/2007 11:40'!
+asString
+
+	^ self symbol asString, value asString.! !
+
 !CWRedcodeOperand methodsFor: 'defaults' stamp: 'as 4/17/2007 18:25'!
 defaultMax
 
 	^ 2 raisedTo: 64.! !
 
-!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/17/2007 08:16'!
+!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/18/2007 10:29'!
 encoding
 
-	"All operands must be sequentially numbered with an integer for integer encoding."
-
-	^ self subclassResponsibility.! !
+	^ self class encoding.! !
 
 !CWRedcodeOperand methodsFor: 'accessing' stamp: 'as 4/17/2007 18:22'!
 max
@@ -589,6 +704,11 @@ max: anInteger
 radix
 
 	^ self valueRadix * (2 raisedTo: (self max log: 2) ceiling).! !
+
+!CWRedcodeOperand methodsFor: 'converting' stamp: 'as 4/18/2007 11:40'!
+symbol
+
+	^ self class symbol.! !
 
 !CWRedcodeOperand methodsFor: 'accessing' stamp: 'as 4/16/2007 17:07'!
 value
@@ -614,6 +734,11 @@ CWRedcodeOperand subclass: #CWRedcodeRelativeOperand
 !CWRedcodeRelativeOperand commentStamp: 'as 4/17/2007 18:37' prior: 0!
 String representation: <number>. The operand is the value at the address that is build from the value of the location plus the offset <number>.!
 
+!CWRedcodeRelativeOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 10:30'!
+encoding
+
+	^ 1.! !
+
 !CWRedcodeRelativeOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 23:06'!
 fromString: aString
 
@@ -621,15 +746,10 @@ fromString: aString
 		value: aString asInteger;
 		yourself.! !
 
-!CWRedcodeRelativeOperand class methodsFor: 'instance creation' stamp: 'as 4/16/2007 23:05'!
-startCharacters
+!CWRedcodeRelativeOperand class methodsFor: 'converting' stamp: 'as 4/18/2007 11:36'!
+symbol
 
-	^ '-1234567890'.! !
-
-!CWRedcodeRelativeOperand methodsFor: 'converting' stamp: 'as 4/17/2007 08:11'!
-encoding
-
-	^ 1.! !
+	^ #''.! !
 
 TestCase subclass: #CWCodingTest
 	instanceVariableNames: 'mars'
@@ -678,8 +798,8 @@ TestCase subclass: #CWRedcodeInstructionTest
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode-Tests'!
 
-!CWRedcodeInstructionTest commentStamp: 'as 4/17/2007 08:30' prior: 0!
-Test instruction encoding.!
+!CWRedcodeInstructionTest commentStamp: 'as 4/18/2007 10:27' prior: 0!
+Test Redcode instructions.!
 
 !CWRedcodeInstructionTest methodsFor: 'testing' stamp: 'as 4/17/2007 11:25'!
 testUniqueEncodings
@@ -704,3 +824,24 @@ testUniqueSymbols
 		symbols add: class symbol.
 	].
 	self assert: count = symbols size.! !
+
+TestCase subclass: #CWRedcodeOperandTest
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode-Tests'!
+
+!CWRedcodeOperandTest commentStamp: 'as 4/18/2007 10:26' prior: 0!
+Test Redcode operands.!
+
+!CWRedcodeOperandTest methodsFor: 'testing' stamp: 'as 4/18/2007 10:28'!
+testUniqueEncodings
+
+	| count encodings |
+	count _ CWRedcodeOperand allOperands size.
+	encodings _ Set new.
+	CWRedcodeOperand allOperands do: [
+		:class |
+		encodings add: class encoding.
+	].
+	self assert: count = encodings size.! !
