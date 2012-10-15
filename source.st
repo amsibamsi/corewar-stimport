@@ -301,7 +301,7 @@ defaultStepDelay
 
 	^ 1.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 18:59'!
+!CWMars methodsFor: 'private' stamp: 'as 7/27/2007 14:45'!
 freeCoreRange: anInteger
 
 	| start free address |
@@ -314,7 +314,7 @@ freeCoreRange: anInteger
 			:offset |
 			free _ free and: [ (self owner: (address + offset)) isNil. ].
 		].
-		free ifTrue: [ ^ self coreAddress: address. ].
+		free ifTrue: [ ^ address. ].
 	].
 	^ nil.
 			! !
@@ -376,14 +376,13 @@ loadProgram: aCWRedcode
 	].
 	^ start.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 12:02'!
+!CWMars methodsFor: 'private' stamp: 'as 7/27/2007 14:51'!
 loadPrograms
 
 	self programs do: [
 		:program |
 		counters at: program put: (self loadProgram: program).
-	].
-	pc _ counters at: programs first.! !
+	].! !
 
 !CWMars methodsFor: 'core' stamp: 'as 4/26/2007 21:26'!
 maxValue
@@ -440,7 +439,7 @@ rounds: anInteger
 
 	rounds _ anInteger.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 4/27/2007 10:34'!
+!CWMars methodsFor: 'public' stamp: 'as 7/27/2007 14:56'!
 run
 
 	| players instruction counter |
@@ -459,7 +458,6 @@ run
 				instruction _ CWRedcodeInstruction encoded: (self read: pc).
 				self owner: player at: pc.
 				counter _ instruction executeOn: self for: player.
-				counter _ self coreAddress: counter.
 				counters at: player put: counter.
 			]
 				on: CWRedcodeDecodeException
