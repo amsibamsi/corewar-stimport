@@ -40,7 +40,7 @@ CWRedcodeException subclass: #CWRedcodeSyntaxException
 There was an error when trying to compile a Redcode program from source code.!
 
 Object subclass: #CWCoreWar
-	instanceVariableNames: 'mars window players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex'
+	instanceVariableNames: 'mars window players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize delay'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
@@ -51,15 +51,71 @@ Main application of Core War.!
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:21'!
 addCustomProgram! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 13:04'!
-buildButtonOn: anObject getState: getStateSel action: actionSel
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:43'!
+buildAddRemovePlayerButtons
+
+	morphs at: #addPlayerButton put: (
+		(self
+			buildButtonOn: self
+			getState: #offButtonState
+			action: #addPlayer
+			label: '+')
+		setBalloonText: 'Add selected program as player.'
+	).
+	morphs at: #removePlayerButton put: (
+		(self
+			buildButtonOn: self
+			getState: #offButtonState
+			action: #removePlayer
+			label: '-')
+		setBalloonText: 'Remove selected player.'
+	).
+	^ Morph new
+		color: Color transparent;
+		layoutPolicy: ProportionalLayout new;
+		layoutInset: 1;
+		addMorph: (morphs at: #addPlayerButton)
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0.5 @ 1));
+		addMorph: (morphs at: #removePlayerButton)
+			fullFrame: (LayoutFrame fractions: (0.5 @ 0 corner: 1 @ 1)).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:18'!
+buildButtonOn: anObject getState: getStateSel action: actionSel label: aString
 
 	^ (PluggableButtonMorph
 			on: anObject
 			getState: getStateSel
 			action: actionSel)
 		color: Color white;
+		label: aString;
 		onColor: Color gray muchLighter offColor: Color gray muchLighter.! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 17:00'!
+buildCoreCanvas
+
+	^ Morph new color: Color white.! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 17:05'!
+buildCoreSizeOption
+
+	morphs at: #coreSizeText put: (
+		(PluggableTextMorph
+			on: self
+			text: #coreSize
+			accept: #coreSize:)
+		color: Color white;
+		setBalloonText: 'Size of the core in number of cells.'
+	).
+	(morphs at: #coreSizeText) extension setProperty: #noVScrollBarPlease toValue: true.
+	^ Morph new
+		color: self windowColor;
+		layoutInset: 5;
+		layoutPolicy: ProportionalLayout new;
+		addMorph: (StringMorph contents: 'Core:')
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0.5 @ 1));
+		addMorph: (morphs at: #coreSizeText)
+			fullFrame: (LayoutFrame fractions: (0.5 @ 0 corner: 0.5 @ 0)
+				offsets: (0 @ 0 corner: self buttonWidth * 3 @ self buttonHeight)).! !
 
 !CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 14:28'!
 buildCustomProgramSelection
@@ -74,31 +130,31 @@ buildCustomProgramSelection
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 1)
 				offsets: (self buttonWidth @ 0 corner: 0 @ 0)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 14:31'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:19'!
 buildCustomProgramSelectionButtons
 
 	morphs at: #addCustomProgramButton put: (
 		(self
 			buildButtonOn: self
 			getState: #offButtonState
-			action: #addCustomProgram)
-		label: '+';
+			action: #addCustomProgram
+			label: '+')
 		setBalloonText: 'Add a custom program.'
 	).
 	morphs at: #removeCustomProgramButton put: (
 		(self
 			buildButtonOn: self
 			getState: #offButtonState
-			action: #removeCustomProgram)
-		label: '-';
+			action: #removeCustomProgram
+			label: '-')
 		setBalloonText: 'Remove selected custom program.'
 	).
 	morphs at: #editCustomProgramButton put: (
 		(self
 			buildButtonOn: self
 			getState: #offButtonState
-			action: #editCustomProgram)
-		label: 'e';
+			action: #editCustomProgram
+			label: 'e')
 		setBalloonText: 'Edit selected custom program.'
 	).
 	^ Morph new
@@ -126,7 +182,44 @@ buildCustomProgramSelectionList
 		borderColor: Color gray muchLighter
 	).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 14:28'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 17:05'!
+buildDelayOption
+
+	morphs at: #delayText put: (
+		(PluggableTextMorph
+			on: self
+			text: #delay
+			accept: #delay:)
+		color: Color white;
+		setBalloonText: 'Dealy in milliseconds between steps.'
+	).
+	(morphs at: #delayText) extension setProperty: #noVScrollBarPlease toValue: true.
+	^ Morph new
+		color: self windowColor;
+		layoutInset: 5;
+		layoutPolicy: ProportionalLayout new;
+		addMorph: (StringMorph contents: 'Delay:')
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0.5 @ 1));
+		addMorph: (morphs at: #delayText)
+			fullFrame: (LayoutFrame fractions: (0.5 @ 0 corner: 0.5 @ 0)
+				offsets: (0 @ 0 corner: self buttonWidth * 3 @ self buttonHeight)).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 17:00'!
+buildLogPanel
+
+	^ Morph new color: Color white.! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 16:48'!
+buildOptionsPanel
+
+	^ Morph new
+		layoutPolicy: ProportionalLayout new;
+		addMorph: self buildCoreSizeOption
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 0.5));
+		addMorph: self buildDelayOption
+			fullFrame: (LayoutFrame fractions: (0 @ 0.5 corner: 1 @ 1)).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:42'!
 buildPlayerPanel
 
 	^ Morph new
@@ -135,7 +228,79 @@ buildPlayerPanel
 		addMorph: self buildProgramSelection
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 0.3));
 		addMorph: self buildCustomProgramSelection
-			fullFrame: (LayoutFrame fractions: (0 @ 0.3 corner: 1 @ 0.6)).! !
+			fullFrame: (LayoutFrame fractions: (0 @ 0.3 corner: 1 @ 0.6));
+		addMorph: self buildAddRemovePlayerButtons
+			fullFrame: (LayoutFrame fractions: (0 @ 0.6 corner: 0 @ 0.6)
+				offsets: (self buttonWidth @ 0
+					corner: self buttonWidth * 3 @ self buttonHeight));
+		addMorph: self buildPlayerSelection
+			fullFrame: (LayoutFrame fractions: (0 @ 0.6 corner: 1 @ 1)
+				offsets: (0 @ self buttonHeight corner: 0 @ 0)).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:44'!
+buildPlayerSelection
+
+	^ Morph new
+		color: Color transparent;
+		layoutPolicy: ProportionalLayout new;
+		addMorph: self buildPlayerSelectionButtons
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0 @ 0)
+				offsets: (0 @ 0 corner: (self buttonWidth) @ (self buttonHeight * 3)));
+		addMorph: self buildPlayerSelectionList
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 1)
+				offsets: (self buttonWidth @ 0 corner: 0 @ 0)).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:49'!
+buildPlayerSelectionButtons
+
+	morphs at: #playerUpButton put: (
+		(self
+			buildButtonOn: self
+			getState: #offButtonState
+			action: #playerUp
+			label: 'u')
+		setBalloonText: 'Move selected player upwards.'
+	).
+	morphs at: #playerDownButton put: (
+		(self
+			buildButtonOn: self
+			getState: #offButtonState
+			action: #playerDown
+			label: 'd')
+		setBalloonText: 'Move selected player downwards.'
+	).
+	morphs at: #cleanPlayersButton put: (
+		(self
+			buildButtonOn: self
+			getState: #offButtonState
+			action: #cleanPlayers
+			label: 'c')
+		setBalloonText: 'Clean up all players.'
+	).
+	^ Morph new
+		color: Color transparent;
+		layoutPolicy: ProportionalLayout new;
+		layoutInset: 1;
+		addMorph: (morphs at: #playerUpButton)
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ (1/3)));
+		addMorph: (morphs at: #playerDownButton)
+			fullFrame: (LayoutFrame fractions: (0 @ (1/3) corner: 1 @ (2/3)));
+		addMorph: (morphs at: #cleanPlayersButton)
+			fullFrame: (LayoutFrame fractions: (0 @ (2/3) corner: 1 @ 1)).! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:48'!
+buildPlayerSelectionList
+
+	^ morphs at: #playerSelectionList put: (
+		(PluggableListMorph
+			on: self
+			list: #players
+			selected: #selectedPlayerIndex
+			changeSelected: #selectPlayerIndex:)
+		setBalloonText: 'Players.';
+		borderWidth: 1;
+		borderColor: Color gray muchLighter
+	).! !
 
 !CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 12:41'!
 buildProgramSelection
@@ -150,15 +315,15 @@ buildProgramSelection
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 1)
 				offsets: (self buttonWidth @ 0 corner: 0 @ 0)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 13:07'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:19'!
 buildProgramSelectionButtons
 
 	morphs at: #refreshProgramsButton put: (
 		(self
 			buildButtonOn: self
 			getState: #offButtonState
-			action: #refreshPrograms)
-		label: 'r';
+			action: #refreshPrograms
+			label: 'r')
 		setBalloonText: 'Refresh standard programs list.'
 	).
 	^ Morph new
@@ -182,20 +347,40 @@ buildProgramSelectionList
 		borderColor: Color gray muchLighter
 	).! !
 
-!CWCoreWar methodsFor: 'view' stamp: 'as 8/11/2007 12:39'!
+!CWCoreWar methodsFor: 'view' stamp: 'as 8/11/2007 15:06'!
 buttonHeight
 
-	^ 25.! !
+	^ 20.! !
 
-!CWCoreWar methodsFor: 'view' stamp: 'as 8/11/2007 12:39'!
+!CWCoreWar methodsFor: 'view' stamp: 'as 8/11/2007 15:06'!
 buttonWidth
 
-	^ 25.! !
+	^ 20.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 16:17'!
+coreSize
+
+	^ coreSize ifNil: [ '100'. ].! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 16:16'!
+coreSize: aString
+
+	^ coreSize _ aString.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:43'!
 customPrograms
 
 	^ OrderedCollection new.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 16:49'!
+delay
+
+	^ delay.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 16:50'!
+delay: aString
+
+	^ delay _ aString.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:39'!
 editCustomProgram! !
@@ -208,14 +393,18 @@ initialize
 	morphs _ Dictionary new.
 	self initializeWindow.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/11/2007 14:24'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/11/2007 17:00'!
 initializeWindow
 	
 	window _ SystemWindow labelled: 'Core War'.
-	window setWindowColor: Color orange lighter.
+	window setWindowColor: self windowColor.
 	window minimumExtent: 640@480.
 	
-	window addMorph: self buildPlayerPanel frame: (0 @ 0 corner: 0.3 @ 0.7).! !
+	window
+		addMorph: self buildPlayerPanel frame: (0 @ 0 corner: 0.3 @ 0.8);
+		addMorph: self buildOptionsPanel frame: (0 @ 0.8 corner: 0.3 @ 1);
+		addMorph: self buildCoreCanvas frame: (0.3 @ 0 corner: 1 @ 0.8);
+		addMorph: self buildLogPanel frame: (0.3 @ 0.8 corner: 1 @ 1).! !
 
 !CWCoreWar methodsFor: 'view' stamp: 'as 8/9/2007 14:15'!
 offButtonState
@@ -273,10 +462,10 @@ selectedProgramIndex
 
 	^ selectedProgramIndex ifNil: [ 1. ].! !
 
-!CWCoreWar methodsFor: 'view' stamp: 'as 8/9/2007 19:32'!
-windowExtent
+!CWCoreWar methodsFor: 'view' stamp: 'as 8/11/2007 16:23'!
+windowColor
 
-	^ 640@480.! !
+	^ Color orange lighter.! !
 
 Object subclass: #CWMars
 	instanceVariableNames: 'core ownerships programs pc counters size stepDelay rounds'
