@@ -39,8 +39,31 @@ CWRedcodeException subclass: #CWRedcodeSyntaxException
 !CWRedcodeSyntaxException commentStamp: 'as 4/17/2007 13:50' prior: 0!
 There was an error when trying to compile a Redcode program from source code.!
 
+Morph subclass: #CWMarsMorph
+	instanceVariableNames: 'mars'
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar'!
+
+!CWMarsMorph class methodsFor: 'instance creation' stamp: 'as 8/12/2007 21:09'!
+on: aCWMars
+
+	^ self new
+		mars: aCWMars;
+		yourself.! !
+
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/12/2007 21:49'!
+drawOn: aCanvas
+
+	aCanvas drawString: 'test' at: 50@50.! !
+
+!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/12/2007 21:02'!
+mars: aCWMars
+
+	mars _ aCWMars.! !
+
 Object subclass: #CWCoreWar
-	instanceVariableNames: 'mars window players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize delay'
+	instanceVariableNames: 'mars window players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize delay logText playerColors'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
@@ -48,8 +71,10 @@ Object subclass: #CWCoreWar
 !CWCoreWar commentStamp: 'as 4/30/2007 15:58' prior: 0!
 Main application of Core War.!
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:21'!
-addCustomProgram! !
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:08'!
+addCustomProgram
+
+	self shouldBeImplemented.! !
 
 !CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:43'!
 buildAddRemovePlayerButtons
@@ -90,12 +115,7 @@ buildButtonOn: anObject getState: getStateSel action: actionSel label: aString
 		label: aString;
 		onColor: Color gray muchLighter offColor: Color gray muchLighter.! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 17:00'!
-buildCoreCanvas
-
-	^ Morph new color: Color white.! !
-
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 17:05'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 20:10'!
 buildCoreSizeOption
 
 	morphs at: #coreSizeText put: (
@@ -104,12 +124,12 @@ buildCoreSizeOption
 			text: #coreSize
 			accept: #coreSize:)
 		color: Color white;
-		setBalloonText: 'Size of the core in number of cells.'
+		setBalloonText: 'Number of cells in the core.'
 	).
 	(morphs at: #coreSizeText) extension setProperty: #noVScrollBarPlease toValue: true.
 	^ Morph new
 		color: self windowColor;
-		layoutInset: 5;
+		layoutInset: 3;
 		layoutPolicy: ProportionalLayout new;
 		addMorph: (StringMorph contents: 'Core:')
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0.5 @ 1));
@@ -182,7 +202,7 @@ buildCustomProgramSelectionList
 		borderColor: Color gray muchLighter
 	).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 17:05'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 20:10'!
 buildDelayOption
 
 	morphs at: #delayText put: (
@@ -191,12 +211,12 @@ buildDelayOption
 			text: #delay
 			accept: #delay:)
 		color: Color white;
-		setBalloonText: 'Dealy in milliseconds between steps.'
+		setBalloonText: 'Delay in milliseconds between steps.'
 	).
 	(morphs at: #delayText) extension setProperty: #noVScrollBarPlease toValue: true.
 	^ Morph new
 		color: self windowColor;
-		layoutInset: 5;
+		layoutInset: 3;
 		layoutPolicy: ProportionalLayout new;
 		addMorph: (StringMorph contents: 'Delay:')
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0.5 @ 1));
@@ -204,20 +224,35 @@ buildDelayOption
 			fullFrame: (LayoutFrame fractions: (0.5 @ 0 corner: 0.5 @ 0)
 				offsets: (0 @ 0 corner: self buttonWidth * 3 @ self buttonHeight)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 17:00'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/12/2007 13:45'!
 buildLogPanel
 
-	^ Morph new color: Color white.! !
+	^ morphs at: #logText put: (
+		PluggableTextMorph
+			on: self
+			text: #logText
+			accept: nil
+	).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 16:48'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/12/2007 21:04'!
+buildMarsMorph
+
+	morphs at: #marsMorph put: (
+		CWMarsMorph on: mars
+	).
+	^ morphs at: #marsMorph! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 20:14'!
 buildOptionsPanel
 
 	^ Morph new
 		layoutPolicy: ProportionalLayout new;
+		addMorph: self buildRunButtons
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 0.4));
 		addMorph: self buildCoreSizeOption
-			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 0.5));
+			fullFrame: (LayoutFrame fractions: (0 @ 0.4 corner: 1 @ 0.7));
 		addMorph: self buildDelayOption
-			fullFrame: (LayoutFrame fractions: (0 @ 0.5 corner: 1 @ 1)).! !
+			fullFrame: (LayoutFrame fractions: (0 @ 0.7 corner: 1 @ 1)).! !
 
 !CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:42'!
 buildPlayerPanel
@@ -347,6 +382,36 @@ buildProgramSelectionList
 		borderColor: Color gray muchLighter
 	).! !
 
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 20:11'!
+buildRunButtons
+
+	morphs at: #startButton put: (
+		(self
+			buildButtonOn: self
+			getState: #offButtonState
+			action: #start
+			label: 'Start')
+		setBalloonText: 'Start the battle.'
+	).
+	morphs at: #abortButton put: (
+		(self
+			buildButtonOn: self
+			getState: #offButtonState
+			action: #abort
+			label: 'Abort')
+		setBalloonText: 'Abort running battle.'
+	).
+	^ Morph new
+		color: self windowColor;
+		layoutPolicy: ProportionalLayout new;
+		layoutInset: 3;
+		addMorph: (morphs at: #startButton)
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0 @ 0)
+				offsets: (0 @ 0 corner: self buttonWidth * 3 @ self buttonHeight));
+		addMorph: (morphs at: #abortButton)
+			fullFrame: (LayoutFrame fractions: (0.5 @ 0 corner: 0.5 @ 0)
+				offsets: (0 @ 0 corner: self buttonWidth * 3 @ self buttonHeight)).! !
+
 !CWCoreWar methodsFor: 'view' stamp: 'as 8/11/2007 15:06'!
 buttonHeight
 
@@ -356,6 +421,11 @@ buttonHeight
 buttonWidth
 
 	^ 20.! !
+
+!CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 14:11'!
+contents
+
+	^ self logText.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 16:17'!
 coreSize
@@ -367,7 +437,7 @@ coreSize: aString
 
 	^ coreSize _ aString.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:43'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:09'!
 customPrograms
 
 	^ OrderedCollection new.! !
@@ -382,18 +452,42 @@ delay: aString
 
 	^ delay _ aString.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:39'!
-editCustomProgram! !
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:08'!
+editCustomProgram
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/11/2007 13:02'!
+	self shouldBeImplemented.! !
+
+!CWCoreWar methodsFor: 'view' stamp: 'as 8/17/2007 09:32'!
+findLeastUsedPlayerColor
+
+	| color |
+	color _ nil.
+	playerColors associationsDo: [
+		:asc |
+		color ifNil: [ color _ asc. ]
+		ifNotNil: [ asc value < color value ifTrue: [ color _ asc. ]. ].
+	].
+	^ color key.! !
+
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/17/2007 09:16'!
 initialize
 
 	mars _ CWMars new.
 	players _ OrderedCollection new.
 	morphs _ Dictionary new.
+	self initializePlayerColors.
 	self initializeWindow.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/11/2007 17:00'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/17/2007 09:16'!
+initializePlayerColors
+
+	playerColors _ Dictionary new.
+	#(blue green red black pink yellow purple brown) do: [
+		:colorSymbol |
+		playerColors at: colorSymbol put: (Color perform: colorSymbol).
+	].! !
+
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/12/2007 21:04'!
 initializeWindow
 	
 	window _ SystemWindow labelled: 'Core War'.
@@ -401,10 +495,45 @@ initializeWindow
 	window minimumExtent: 640@480.
 	
 	window
-		addMorph: self buildPlayerPanel frame: (0 @ 0 corner: 0.3 @ 0.8);
-		addMorph: self buildOptionsPanel frame: (0 @ 0.8 corner: 0.3 @ 1);
-		addMorph: self buildCoreCanvas frame: (0.3 @ 0 corner: 1 @ 0.8);
+		addMorph: self buildOptionsPanel frame: (0 @ 0 corner: 0.3 @ 0.2);
+		addMorph: self buildPlayerPanel frame: (0 @ 0.2 corner: 0.3 @ 1);
+		addMorph: self buildMarsMorph frame: (0.3 @ 0 corner: 1 @ 0.8);
 		addMorph: self buildLogPanel frame: (0.3 @ 0.8 corner: 1 @ 1).! !
+
+!CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 13:54'!
+logClear
+
+	logText _ nil.
+	(morphs at: #logText) update: #clearText.! !
+
+!CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 13:53'!
+logError: aString
+
+	self logText: '(!!) ', aString.! !
+
+!CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 13:44'!
+logInfo: aString
+
+	self logText: aString.! !
+
+!CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 12:07'!
+logText
+
+	^ logText ifNil: [ logText _ String new. ].! !
+
+!CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 14:11'!
+logText: aString
+
+	| delimiter |
+	self logText isEmpty ifFalse: [ delimiter _ Character cr asString. ] ifTrue: [ delimiter _ ''. ].
+	logText _ self logText, delimiter, aString.
+	"(morphs at: #logText) update: #logText."
+	(morphs at: #logText) appendEntry.! !
+
+!CWCoreWar methodsFor: 'utility' stamp: 'as 8/12/2007 11:56'!
+noop: anything
+
+	.! !
 
 !CWCoreWar methodsFor: 'view' stamp: 'as 8/9/2007 14:15'!
 offButtonState
@@ -426,41 +555,61 @@ programs
 
 	^ CWRedcode allRedcodes.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 14:16'!
-refreshPrograms! !
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:03'!
+refreshPrograms
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:39'!
-removeCustomProgram! !
+	(morphs at: #programSelectionList) updateList.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:09'!
+removeCustomProgram
+
+	self shouldBeImplemented.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 08:26'!
+selectCustomProgramIndex: aNumber
+
+	selectedCustomProgramIndex _ aNumber.
+	self changed: #selectedCustomProgramIndex.
+	self unselectProgramIndex.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/8/2007 17:36'!
 selectPlayerIndex: aNumber
 
 	selectedPlayerIndex _ aNumber.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 14:33'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 08:24'!
 selectProgramIndex: aNumber
 
-	selectedProgramIndex _ aNumber.! !
+	selectedProgramIndex _ aNumber.
+	self changed: #selectedProgramIndex.
+	self unselectCustomProgramIndex.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 14:33'!
-selecteCustomProgramIndex: aNumber
-
-	selectedCustomProgramIndex _ aNumber.! !
-
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 15:42'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 08:25'!
 selectedCustomProgramIndex
 
-	^ selectedCustomProgramIndex ifNil: [ 1. ].! !
+	^ selectedCustomProgramIndex ifNil: [ 0. ].! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 14:34'!
 selectedPlayerIndex
 
 	^ selectedPlayerIndex ifNil: [ 0. ].! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/9/2007 14:06'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/16/2007 23:02'!
 selectedProgramIndex
 
-	^ selectedProgramIndex ifNil: [ 1. ].! !
+	^ selectedProgramIndex ifNil: [ 0. ].! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 08:30'!
+unselectCustomProgramIndex
+
+	selectedCustomProgramIndex _ 0.
+	self changed: #selectedCustomProgramIndex.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 08:28'!
+unselectProgramIndex
+
+	selectedProgramIndex _ 0.
+	self changed: #selectedProgramIndex.! !
 
 !CWCoreWar methodsFor: 'view' stamp: 'as 8/11/2007 16:23'!
 windowColor
@@ -832,10 +981,22 @@ encoded: aCollection name: aString
 
 	^ (self encoded: aCollection) name: aString; yourself.! !
 
-!CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/8/2007 21:44'!
-newRedcodeMover
+!CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/16/2007 19:24'!
+newRedcodeDwarf
 
-	^ self source: 'MOV 0 1' name: 'Mover'.! !
+	^ self source: '
+		DAT 0
+		ADD 4 -1
+		MOV #0 @-2
+		JMP -2'
+	name: 'Dwarf'.! !
+
+!CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/17/2007 09:05'!
+newRedcodeImp
+
+	^ self source: '
+		MOV 0 1'
+	name: 'Imp'.! !
 
 !CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/8/2007 21:40'!
 newSelectorPrefix
