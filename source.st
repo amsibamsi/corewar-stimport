@@ -63,7 +63,7 @@ mars: aCWMars
 	mars _ aCWMars.! !
 
 Object subclass: #CWCoreWar
-	instanceVariableNames: 'mars window players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize delay logText playerColors'
+	instanceVariableNames: 'mars window programs customPrograms players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize delay logText playerColors'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
@@ -76,7 +76,31 @@ addCustomProgram
 
 	self shouldBeImplemented.! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:43'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 20:02'!
+addPlayer
+
+	| program customProgram player color |
+	program _ customProgram _ nil.
+	self isProgramSelected ifTrue: [ program _ programs at: selectedProgramIndex. ].
+	self isCustomProgramSelected ifTrue:
+		[ customProgram _ programs at: selectedCustomProgramIndex. ].
+	player _ program ifNil: [ customProgram. ].
+	player ifNotNil: [
+		color _ self findLeastUsedPlayerColor.
+		self addPlayerColor: color.
+		players add: (CWPlayer program: player color: color).
+		self refreshPlayerSelection.
+		self changed: #players.
+	].! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 13:54'!
+addPlayerColor: aColor
+
+	| value |
+	value _ playerColors at: aColor.
+	playerColors at: aColor put: value + 1.! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:04'!
 buildAddRemovePlayerButtons
 
 	morphs at: #addPlayerButton put: (
@@ -85,7 +109,7 @@ buildAddRemovePlayerButtons
 			getState: #offButtonState
 			action: #addPlayer
 			label: '+')
-		setBalloonText: 'Add selected program as player.'
+		setBalloonText: 'Add selected program as player'
 	).
 	morphs at: #removePlayerButton put: (
 		(self
@@ -93,7 +117,7 @@ buildAddRemovePlayerButtons
 			getState: #offButtonState
 			action: #removePlayer
 			label: '-')
-		setBalloonText: 'Remove selected player.'
+		setBalloonText: 'Remove selected player'
 	).
 	^ Morph new
 		color: Color transparent;
@@ -115,7 +139,7 @@ buildButtonOn: anObject getState: getStateSel action: actionSel label: aString
 		label: aString;
 		onColor: Color gray muchLighter offColor: Color gray muchLighter.! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 20:10'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:04'!
 buildCoreSizeOption
 
 	morphs at: #coreSizeText put: (
@@ -124,7 +148,7 @@ buildCoreSizeOption
 			text: #coreSize
 			accept: #coreSize:)
 		color: Color white;
-		setBalloonText: 'Number of cells in the core.'
+		setBalloonText: 'Number of cells in the core'
 	).
 	(morphs at: #coreSizeText) extension setProperty: #noVScrollBarPlease toValue: true.
 	^ Morph new
@@ -150,7 +174,7 @@ buildCustomProgramSelection
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 1)
 				offsets: (self buttonWidth @ 0 corner: 0 @ 0)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:19'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:04'!
 buildCustomProgramSelectionButtons
 
 	morphs at: #addCustomProgramButton put: (
@@ -159,7 +183,7 @@ buildCustomProgramSelectionButtons
 			getState: #offButtonState
 			action: #addCustomProgram
 			label: '+')
-		setBalloonText: 'Add a custom program.'
+		setBalloonText: 'Add a custom program'
 	).
 	morphs at: #removeCustomProgramButton put: (
 		(self
@@ -167,7 +191,7 @@ buildCustomProgramSelectionButtons
 			getState: #offButtonState
 			action: #removeCustomProgram
 			label: '-')
-		setBalloonText: 'Remove selected custom program.'
+		setBalloonText: 'Remove selected custom program'
 	).
 	morphs at: #editCustomProgramButton put: (
 		(self
@@ -175,7 +199,7 @@ buildCustomProgramSelectionButtons
 			getState: #offButtonState
 			action: #editCustomProgram
 			label: 'e')
-		setBalloonText: 'Edit selected custom program.'
+		setBalloonText: 'Edit selected custom program'
 	).
 	^ Morph new
 		color: Color transparent;
@@ -188,7 +212,7 @@ buildCustomProgramSelectionButtons
 		addMorph: (morphs at: #editCustomProgramButton)
 			fullFrame: (LayoutFrame fractions: (0 @ (2/3) corner: 1 @ 1)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 14:39'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:04'!
 buildCustomProgramSelectionList
 
 	^ morphs at: #customProgramSelectionList put: (
@@ -197,12 +221,12 @@ buildCustomProgramSelectionList
 			list: #customPrograms
 			selected: #selectedCustomProgramIndex
 			changeSelected: #selectCustomProgramIndex:)
-		setBalloonText: 'Custom programs.';
+		setBalloonText: 'Custom programs';
 		borderWidth: 1;
 		borderColor: Color gray muchLighter
 	).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 20:10'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:05'!
 buildDelayOption
 
 	morphs at: #delayText put: (
@@ -211,7 +235,7 @@ buildDelayOption
 			text: #delay
 			accept: #delay:)
 		color: Color white;
-		setBalloonText: 'Delay in milliseconds between steps.'
+		setBalloonText: 'Delay in milliseconds between steps'
 	).
 	(morphs at: #delayText) extension setProperty: #noVScrollBarPlease toValue: true.
 	^ Morph new
@@ -285,7 +309,7 @@ buildPlayerSelection
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 1)
 				offsets: (self buttonWidth @ 0 corner: 0 @ 0)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:49'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:05'!
 buildPlayerSelectionButtons
 
 	morphs at: #playerUpButton put: (
@@ -294,7 +318,7 @@ buildPlayerSelectionButtons
 			getState: #offButtonState
 			action: #playerUp
 			label: 'u')
-		setBalloonText: 'Move selected player upwards.'
+		setBalloonText: 'Move selected player upwards'
 	).
 	morphs at: #playerDownButton put: (
 		(self
@@ -302,7 +326,7 @@ buildPlayerSelectionButtons
 			getState: #offButtonState
 			action: #playerDown
 			label: 'd')
-		setBalloonText: 'Move selected player downwards.'
+		setBalloonText: 'Move selected player downwards'
 	).
 	morphs at: #cleanPlayersButton put: (
 		(self
@@ -310,7 +334,7 @@ buildPlayerSelectionButtons
 			getState: #offButtonState
 			action: #cleanPlayers
 			label: 'c')
-		setBalloonText: 'Clean up all players.'
+		setBalloonText: 'Clean up all players'
 	).
 	^ Morph new
 		color: Color transparent;
@@ -350,7 +374,7 @@ buildProgramSelection
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 1)
 				offsets: (self buttonWidth @ 0 corner: 0 @ 0)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:19'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:05'!
 buildProgramSelectionButtons
 
 	morphs at: #refreshProgramsButton put: (
@@ -359,7 +383,7 @@ buildProgramSelectionButtons
 			getState: #offButtonState
 			action: #refreshPrograms
 			label: 'r')
-		setBalloonText: 'Refresh standard programs list.'
+		setBalloonText: 'Refresh standard programs list'
 	).
 	^ Morph new
 		color: Color transparent;
@@ -368,7 +392,7 @@ buildProgramSelectionButtons
 		addMorph: (morphs at: #refreshProgramsButton)
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ (1/3))).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 14:39'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:05'!
 buildProgramSelectionList
 
 	^ morphs at: #programSelectionList put: (
@@ -377,12 +401,12 @@ buildProgramSelectionList
 			list: #programs
 			selected: #selectedProgramIndex
 			changeSelected: #selectProgramIndex:)
-		setBalloonText: 'Standard programs.';
+		setBalloonText: 'Standard programs';
 		borderWidth: 1;
 		borderColor: Color gray muchLighter
 	).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 20:11'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:06'!
 buildRunButtons
 
 	morphs at: #startButton put: (
@@ -391,7 +415,7 @@ buildRunButtons
 			getState: #offButtonState
 			action: #start
 			label: 'Start')
-		setBalloonText: 'Start the battle.'
+		setBalloonText: 'Start the battle'
 	).
 	morphs at: #abortButton put: (
 		(self
@@ -399,7 +423,7 @@ buildRunButtons
 			getState: #offButtonState
 			action: #abort
 			label: 'Abort')
-		setBalloonText: 'Abort running battle.'
+		setBalloonText: 'Abort running battle'
 	).
 	^ Morph new
 		color: self windowColor;
@@ -422,32 +446,42 @@ buttonWidth
 
 	^ 20.! !
 
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:23'!
+cleanPlayers
+
+	players copy do: [
+		:player |
+		self removePlayerColor: (players remove: player) color.
+	].
+	self unselectPlayer.
+	self changed: #players.! !
+
 !CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 14:11'!
 contents
 
 	^ self logText.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 16:17'!
+!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/11/2007 16:17'!
 coreSize
 
 	^ coreSize ifNil: [ '100'. ].! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 16:16'!
+!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/11/2007 16:16'!
 coreSize: aString
 
 	^ coreSize _ aString.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:09'!
+!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/17/2007 09:09'!
 customPrograms
 
 	^ OrderedCollection new.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 16:49'!
+!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/11/2007 16:49'!
 delay
 
 	^ delay.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 16:50'!
+!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/11/2007 16:50'!
 delay: aString
 
 	^ delay _ aString.! !
@@ -469,23 +503,29 @@ findLeastUsedPlayerColor
 	].
 	^ color key.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/17/2007 09:16'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/17/2007 11:55'!
 initialize
 
 	mars _ CWMars new.
 	players _ OrderedCollection new.
 	morphs _ Dictionary new.
+	self initializePrograms.
 	self initializePlayerColors.
 	self initializeWindow.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/17/2007 09:16'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/17/2007 14:09'!
 initializePlayerColors
 
 	playerColors _ Dictionary new.
-	#(blue green red black pink yellow purple brown) do: [
+	#(blue green red black yellow brown cyan orange magenta) do: [
 		:colorSymbol |
-		playerColors at: colorSymbol put: (Color perform: colorSymbol).
+		playerColors at: (Color perform: colorSymbol) put: 0.
 	].! !
+
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/17/2007 11:47'!
+initializePrograms
+
+	programs _ OrderedCollection newFrom: CWRedcode allRedcodes.! !
 
 !CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/12/2007 21:04'!
 initializeWindow
@@ -499,6 +539,21 @@ initializeWindow
 		addMorph: self buildPlayerPanel frame: (0 @ 0.2 corner: 0.3 @ 1);
 		addMorph: self buildMarsMorph frame: (0.3 @ 0 corner: 1 @ 0.8);
 		addMorph: self buildLogPanel frame: (0.3 @ 0.8 corner: 1 @ 1).! !
+
+!CWCoreWar methodsFor: 'testing' stamp: 'as 8/17/2007 11:14'!
+isCustomProgramSelected
+
+	^ self selectedCustomProgramIndex ~= 0.! !
+
+!CWCoreWar methodsFor: 'testing' stamp: 'as 8/17/2007 13:43'!
+isPlayerSelected
+
+	^ self selectedPlayerIndex ~= 0.! !
+
+!CWCoreWar methodsFor: 'testing' stamp: 'as 8/17/2007 11:14'!
+isProgramSelected
+
+	^ self selectedProgramIndex ~= 0.! !
 
 !CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 13:54'!
 logClear
@@ -545,44 +600,82 @@ open
 
 	window openInWorld.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/8/2007 16:56'!
+!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/8/2007 16:56'!
 players
 
 	^ players.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/8/2007 21:53'!
+!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/17/2007 11:55'!
 programs
 
-	^ CWRedcode allRedcodes.! !
+	^ programs.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:03'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 20:11'!
+refreshCustomProgramSelection
+
+	selectedCustomProgramIndex _
+		self selectedCustomProgramIndex min: customPrograms size max: 0.
+	self changed: #selectCustomProgramIndex.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 20:10'!
+refreshPlayerSelection
+
+	selectedPlayerIndex _ self selectedPlayerIndex min: players size max: 0.
+	self changed: #selectPlayerIndex.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 20:10'!
+refreshProgramSelection
+
+	selectedProgramIndex _ self selectedProgramIndex min: programs size max: 0.
+	self changed: #selectProgramIndex.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 20:03'!
 refreshPrograms
 
-	(morphs at: #programSelectionList) updateList.! !
+	self initializePrograms.
+	self refreshProgramSelection.
+	self changed: #programs.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:09'!
 removeCustomProgram
 
 	self shouldBeImplemented.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 08:26'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 17:01'!
+removePlayer
+
+	self isPlayerSelected ifTrue: [
+		self removePlayerColor: (players removeAt: selectedPlayerIndex) color.
+		self refreshPlayerSelection.
+		self changed: #players.
+	].! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 13:54'!
+removePlayerColor: aColor
+
+	| value |
+	value _ playerColors at: aColor.
+	playerColors at: aColor put: value - 1.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
 selectCustomProgramIndex: aNumber
 
 	selectedCustomProgramIndex _ aNumber.
 	self changed: #selectedCustomProgramIndex.
-	self unselectProgramIndex.! !
+	self unselectProgram.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/8/2007 17:36'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 11:59'!
 selectPlayerIndex: aNumber
 
-	selectedPlayerIndex _ aNumber.! !
+	selectedPlayerIndex _ aNumber.
+	self changed: #selectedPlayerIndex.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 08:24'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
 selectProgramIndex: aNumber
 
 	selectedProgramIndex _ aNumber.
 	self changed: #selectedProgramIndex.
-	self unselectCustomProgramIndex.! !
+	self unselectCustomProgram.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 08:25'!
 selectedCustomProgramIndex
@@ -599,14 +692,20 @@ selectedProgramIndex
 
 	^ selectedProgramIndex ifNil: [ 0. ].! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 08:30'!
-unselectCustomProgramIndex
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
+unselectCustomProgram
 
 	selectedCustomProgramIndex _ 0.
 	self changed: #selectedCustomProgramIndex.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 08:28'!
-unselectProgramIndex
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:06'!
+unselectPlayer
+
+	selectedPlayerIndex _ 0.
+	self changed: #selectedPlayerIndex.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
+unselectProgram
 
 	selectedProgramIndex _ 0.
 	self changed: #selectedProgramIndex.! !
@@ -902,32 +1001,36 @@ write: valueInteger at: integerAddress for: aCWRedcode
 	^ value.! !
 
 Object subclass: #CWPlayer
-	instanceVariableNames: 'program name color'
+	instanceVariableNames: 'program color'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
 
-!CWPlayer commentStamp: 'as 8/8/2007 16:49' prior: 0!
-A player participating in a Core War game.!
+!CWPlayer commentStamp: 'as 8/17/2007 11:07' prior: 0!
+A program participating in a Core War game.!
 
-!CWPlayer class methodsFor: 'instance creation' stamp: 'as 8/8/2007 17:39'!
-program: aCWRedcode name: aString color: aColor
+!CWPlayer class methodsFor: 'instance creation' stamp: 'as 8/17/2007 11:08'!
+program: aCWRedcode color: aColor
 
 	^ self new
 		program: aCWRedcode;
-		name: aString;
 		color: aColor;
 		yourself.! !
+
+!CWPlayer methodsFor: 'accessing' stamp: 'as 8/17/2007 13:50'!
+color
+
+	^ color.! !
 
 !CWPlayer methodsFor: 'accessing' stamp: 'as 8/8/2007 17:39'!
 color: aColor
 
 	color _ aColor.! !
 
-!CWPlayer methodsFor: 'accessing' stamp: 'as 8/8/2007 17:39'!
-name: aString
+!CWPlayer methodsFor: 'printing' stamp: 'as 8/17/2007 11:43'!
+printOn: aStream
 
-	name _ aString.! !
+	aStream nextPutAll: program name, ' (', (color name ifNil: [ 'unknown color'. ]), ')'.! !
 
 !CWPlayer methodsFor: 'accessing' stamp: 'as 8/8/2007 17:39'!
 program: aCWRedcode
