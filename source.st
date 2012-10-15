@@ -193,12 +193,12 @@ Object subclass: #CWCoreWar
 !CWCoreWar commentStamp: 'as 8/27/2007 13:57' prior: 0!
 Core War morphic GUI.!
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/31/2007 10:07'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 1/1/2008 20:31'!
 abort
 
 	simulation ifNotNil: [
 		simulation terminate.
-		self logError: 'Aborted'.
+		self logInfo: 'Aborted'.
 		simulation _ nil.
 	].! !
 
@@ -692,10 +692,10 @@ logClear
 	logText _ nil.
 	(morphs at: #logText) update: #clearText.! !
 
-!CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 13:53'!
+!CWCoreWar methodsFor: 'logging' stamp: 'as 1/1/2008 20:26'!
 logError: aString
 
-	self logText: '(!!) ', aString.! !
+	self logText: 'Error: ', aString.! !
 
 !CWCoreWar methodsFor: 'logging' stamp: 'as 8/29/2007 13:26'!
 logInfo: aString
