@@ -39,7 +39,7 @@ CWRedcodeException subclass: #CWRedcodeSyntaxException
 There was an error when trying to compile a Redcode program from source code.!
 
 Morph subclass: #CWMarsMorph
-	instanceVariableNames: 'mars'
+	instanceVariableNames: 'mars cellSize'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
@@ -59,52 +59,61 @@ borderSize
 
 	^ 10.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/27/2007 14:14'!
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/29/2007 15:38'!
 cellGap
 
-	^ 2.! !
+	^ self cellSize // 2.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/27/2007 14:14'!
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/28/2007 13:26'!
+cellRectangle: aNumber
+
+	| columns x y r |
+	columns _ self cellsPerRow.
+	x _ (aNumber \\ columns) * (self cellSize + self cellGap) + self borderSize.
+	y _ (aNumber // columns) * (self cellSize + self cellGap) + self borderSize.
+	r _ (self bounds left + x) @ (self bounds top + y) extent: self cellSize @ self cellSize.
+	^ r.! !
+
+!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/29/2007 14:55'!
 cellSize
 
-	^ 5.! !
+	^ cellSize ifNil: [ cellSize _ self defaultCellSize. ].! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 17:34'!
-cellsPerRow: cellsCount
+!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/29/2007 15:01'!
+cellSize: aNumber
 
-	^ (self width / self height * (cellsCount sqrt)) rounded.! !
+	cellSize _ aNumber.
+	self changed.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/27/2007 11:48'!
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/28/2007 13:23'!
+cellsPerRow
+
+	^ (self width / self height * (mars coreSize sqrt)) rounded.! !
+
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/28/2007 13:48'!
 coreSize
 
-	| columns x y cellsCount cellSize cellGap borderSize |
-	cellsCount _ mars coreSize.
-	columns _ self cellsPerRow: cellsCount.
-	cellSize _ self cellSize.
-	cellGap _ self cellGap.
-	borderSize _ self borderSize.
-	x _ columns * (cellSize + cellGap) + (2 * borderSize).
-	y _ (cellsCount // columns) * (cellSize + cellGap) + (2 * borderSize).
+	| x y |
+	x _ self cellsPerRow * (self cellSize + self cellGap) + (2 * self borderSize).
+	y _ (mars coreSize // self cellsPerRow) * (self cellSize + self cellGap) + (2 * self borderSize).
 	^ x @ y.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 19:47'!
+!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/29/2007 14:54'!
+defaultCellSize
+
+	^ 7.! !
+
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/28/2007 13:53'!
 drawOn: aCanvas
 
-	| cellsPerRow cellSize cellGap borderSize top left cellsCount |
+	"Clear canvas"
 	aCanvas fillRectangle: self bounds fillStyle: self fillStyle borderStyle: self borderStyle.
-	cellsCount _ mars coreSize.
-	cellsPerRow _ self cellsPerRow: cellsCount.
-	cellSize _ self cellSize.
-	cellGap _ self cellGap.
-	borderSize _ self borderSize.
-	top _ self top.
-	left _ self left.
-	0 to: cellsCount - 1 do: [
+	
+	"Draw cell ownerships"
+	0 to: mars coreSize - 1 do: [
 		:index |
-		| x y r c |
-		x _ (index \\ cellsPerRow) * (cellSize + cellGap) + borderSize.
-		y _ (index // cellsPerRow) * (cellSize + cellGap) + borderSize.
-		r _ (left + x) @ (top + y) extent: cellSize @ cellSize.
+		| r c |
+		r _ self cellRectangle: index.
 		c _ (mars color: index) ifNil: [ self neutralColor. ].
 		aCanvas fillRectangle: r color: c.
 	].! !
@@ -120,14 +129,13 @@ neutralColor
 
 	^ Color gray lighter.! !
 
-!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/27/2007 11:29'!
+!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/29/2007 15:00'!
 update: aSymbol
 
-	aSymbol = #core ifTrue: [ self changed. ].
-	aSymbol = #coreSize ifTrue: [ self extent: self coreSize. ].! !
+	aSymbol = #core ifTrue: [ self changed. ].! !
 
 Object subclass: #CWCoreWar
-	instanceVariableNames: 'mars window programs customPrograms players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize logText playerColors simulation'
+	instanceVariableNames: 'mars window programs customPrograms players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize logText playerColors simulation rounds'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
@@ -135,11 +143,12 @@ Object subclass: #CWCoreWar
 !CWCoreWar commentStamp: 'as 8/27/2007 13:57' prior: 0!
 Core War morphic GUI.!
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/23/2007 17:09'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/29/2007 13:37'!
 abort
 
 	simulation ifNotNil: [
 		simulation terminate.
+		self logInfo: 'Simulation aborted'.
 		simulation _ nil.
 	].! !
 
@@ -210,6 +219,29 @@ buildButtonOn: anObject getState: getStateSel action: actionSel label: aString
 		color: Color white;
 		label: aString;
 		onColor: Color gray muchLighter offColor: Color gray muchLighter.! !
+
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/29/2007 13:52'!
+buildCellSizeOption
+
+	morphs at: #cellSizeText put: (
+		(PluggableTextMorph
+			on: self
+			text: #cellSizeText
+			accept: #cellSizeText:)
+		color: Color white;
+		setBalloonText: 'Width and height of one core cell';
+		acceptOnCR: true
+	).
+	(morphs at: #cellSizeText) extension setProperty: #noVScrollBarPlease toValue: true.
+	^ Morph new
+		color: self windowColor;
+		layoutInset: 3;
+		layoutPolicy: ProportionalLayout new;
+		addMorph: (StringMorph contents: 'Cell size:')
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0.5 @ 1));
+		addMorph: (morphs at: #cellSizeText)
+			fullFrame: (LayoutFrame fractions: (0.5 @ 0 corner: 0.5 @ 0)
+				offsets: (0 @ 0 corner: self buttonWidth * 3 @ self buttonHeight)).! !
 
 !CWCoreWar methodsFor: 'window-building' stamp: 'as 8/22/2007 00:54'!
 buildCoreSizeOption
@@ -322,7 +354,7 @@ buildDelayOption
 			fullFrame: (LayoutFrame fractions: (0.5 @ 0 corner: 0.5 @ 0)
 				offsets: (0 @ 0 corner: self buttonWidth * 3 @ self buttonHeight)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/12/2007 13:45'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/29/2007 13:14'!
 buildLogPanel
 
 	^ morphs at: #logText put: (
@@ -340,17 +372,21 @@ buildMarsMorph
 	).
 	^ morphs at: #marsMorph! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 20:14'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/29/2007 15:24'!
 buildOptionsPanel
 
 	^ Morph new
 		layoutPolicy: ProportionalLayout new;
 		addMorph: self buildRunButtons
-			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 0.4));
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 1 @ 0.2));
 		addMorph: self buildCoreSizeOption
-			fullFrame: (LayoutFrame fractions: (0 @ 0.4 corner: 1 @ 0.7));
+			fullFrame: (LayoutFrame fractions: (0 @ 0.2 corner: 1 @ 0.4));
 		addMorph: self buildDelayOption
-			fullFrame: (LayoutFrame fractions: (0 @ 0.7 corner: 1 @ 1)).! !
+			fullFrame: (LayoutFrame fractions: (0 @ 0.4 corner: 1 @ 0.6));
+		addMorph: self buildRoundsOption
+			fullFrame: (LayoutFrame fractions: (0 @ 0.6 corner: 1 @ 0.8));
+		addMorph: self buildCellSizeOption
+			fullFrame: (LayoutFrame fractions: (0 @ 0.8 corner: 1 @ 1)).! !
 
 !CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:42'!
 buildPlayerPanel
@@ -480,6 +516,29 @@ buildProgramSelectionList
 		borderColor: Color gray muchLighter
 	).! !
 
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/29/2007 13:49'!
+buildRoundsOption
+
+	morphs at: #roundsText put: (
+		(PluggableTextMorph
+			on: self
+			text: #roundsText
+			accept: #roundsText:)
+		color: Color white;
+		setBalloonText: 'Maximum number of rounds in the battle';
+		acceptOnCR: true
+	).
+	(morphs at: #roundsText) extension setProperty: #noVScrollBarPlease toValue: true.
+	^ Morph new
+		color: self windowColor;
+		layoutInset: 3;
+		layoutPolicy: ProportionalLayout new;
+		addMorph: (StringMorph contents: 'Rounds:')
+			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0.5 @ 1));
+		addMorph: (morphs at: #roundsText)
+			fullFrame: (LayoutFrame fractions: (0.5 @ 0 corner: 0.5 @ 0)
+				offsets: (0 @ 0 corner: self buttonWidth * 3 @ self buttonHeight)).! !
+
 !CWCoreWar methodsFor: 'window-building' stamp: 'as 8/24/2007 11:42'!
 buildRunButtons
 
@@ -519,6 +578,27 @@ buttonHeight
 buttonWidth
 
 	^ 20.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/29/2007 14:54'!
+cellSizeText
+
+	^ Text fromString: (morphs at: #marsMorph) cellSize asString.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/29/2007 15:01'!
+cellSizeText: aText
+
+	| size |
+	size _ aText asString asInteger.
+	size ifNil: [ size _ (morphs at: #marsMorph) defaultCellSize. ].
+	size < 1 ifTrue: [ size _ 1. ].
+	(morphs at: #marsMorph) cellSize: size.
+	self changed: #cellSizeText.
+	^ true.! !
+
+!CWCoreWar methodsFor: 'logging' stamp: 'as 8/29/2007 13:24'!
+characterLimit
+
+	^ 1000.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:23'!
 cleanPlayers
@@ -589,7 +669,7 @@ findLeastUsedPlayerColor
 	].
 	^ color key.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/24/2007 16:04'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/29/2007 14:42'!
 initialize
 
 	mars _ CWMars new.
@@ -597,15 +677,16 @@ initialize
 	morphs _ Dictionary new.
 	selectedProgramIndex _ selectedCustomProgramIndex _ selectedPlayerIndex _ 0.
 	coreSize _ mars defaultSize.
+	rounds _ mars defaultRounds.
 	self initializePrograms.
 	self initializePlayerColors.
 	self initializeWindow.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/17/2007 14:09'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/29/2007 15:50'!
 initializePlayerColors
 
 	playerColors _ Dictionary new.
-	#(blue green red black yellow brown cyan orange magenta) do: [
+	#(blue green red black brown cyan orange magenta) do: [
 		:colorSymbol |
 		playerColors at: (Color perform: colorSymbol) put: 0.
 	].! !
@@ -615,18 +696,20 @@ initializePrograms
 
 	programs _ OrderedCollection newFrom: CWRedcode allRedcodes.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/12/2007 21:04'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/29/2007 15:23'!
 initializeWindow
-	
+
 	window _ SystemWindow labelled: 'Core War'.
 	window setWindowColor: self windowColor.
 	window minimumExtent: 640@480.
-	
+
 	window
-		addMorph: self buildOptionsPanel frame: (0 @ 0 corner: 0.3 @ 0.2);
-		addMorph: self buildPlayerPanel frame: (0 @ 0.2 corner: 0.3 @ 1);
+		addMorph: self buildPlayerPanel frame: (0 @ 0.4 corner: 0.3 @ 1);
 		addMorph: self buildMarsMorph frame: (0.3 @ 0 corner: 1 @ 0.8);
-		addMorph: self buildLogPanel frame: (0.3 @ 0.8 corner: 1 @ 1).! !
+		addMorph: self buildLogPanel frame: (0.3 @ 0.8 corner: 1 @ 1);
+
+		"The option panel depends on other morphs and should be initialized in the end"
+		addMorph: self buildOptionsPanel frame: (0 @ 0 corner: 0.3 @ 0.4).! !
 
 !CWCoreWar methodsFor: 'testing' stamp: 'as 8/17/2007 11:14'!
 isCustomProgramSelected
@@ -654,7 +737,7 @@ logError: aString
 
 	self logText: '(!!) ', aString.! !
 
-!CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 13:44'!
+!CWCoreWar methodsFor: 'logging' stamp: 'as 8/29/2007 13:26'!
 logInfo: aString
 
 	self logText: aString.! !
@@ -664,14 +747,11 @@ logText
 
 	^ logText ifNil: [ logText _ String new. ].! !
 
-!CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 14:11'!
+!CWCoreWar methodsFor: 'logging' stamp: 'as 8/29/2007 13:35'!
 logText: aString
 
-	| delimiter |
-	self logText isEmpty ifFalse: [ delimiter _ Character cr asString. ] ifTrue: [ delimiter _ ''. ].
-	logText _ self logText, delimiter, aString.
-	"(morphs at: #logText) update: #logText."
-	(morphs at: #logText) appendEntry.! !
+	logText _ aString, Character cr asString.
+	(morphs at: #logText) update: #appendEntry.! !
 
 !CWCoreWar methodsFor: 'utility' stamp: 'as 8/12/2007 11:56'!
 noop: anything
@@ -771,20 +851,39 @@ removePlayerColor: aColor
 	value _ playerColors at: aColor.
 	playerColors at: aColor put: value - 1.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/26/2007 15:45'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/29/2007 14:43'!
+roundsText
+
+	^ Text fromString: rounds asString.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/29/2007 14:41'!
+roundsText: aText
+
+	| size |
+	size _ aText asString asInteger.
+	size ifNil: [ size _ mars defaultRounds. ].
+	size < 0 ifTrue: [ size _ 0. ].
+	rounds _ size.
+	self changed: #roundsText.
+	^ true.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/29/2007 14:44'!
 runPause
 
 	simulation ifNil: [
 		mars
 			setPlayers: players;
-			coreSize: coreSize.
+			coreSize: coreSize;
+			rounds: rounds.
 		simulation _ [ self simulate. ] newProcess.
 		simulation resume.
 	] ifNotNil: [
 		simulation isSuspended ifTrue: [
 			simulation resume.
+			self logInfo: 'Simulation resumed'.
 		] ifFalse: [
 			simulation suspend.
+			self logInfo: 'Simulation paused'.
 		].
 	].! !
 
@@ -823,10 +922,19 @@ selectedProgramIndex
 
 	^ selectedProgramIndex.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/26/2007 15:44'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/29/2007 16:06'!
 simulate
 
-	mars run.
+	| winners |
+	self logClear; logInfo: 'Simulation starting'.
+	winners _ ''.
+	[
+		mars run do: [ :winner | winners _ winners, ' ', winner asString. ].
+		self logInfo: 'Simulation finished, winners are:', winners.
+	] on: CWMarsException do: [
+		:e |
+		self logError: e asString.
+	].
 	simulation _ nil.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
@@ -914,20 +1022,25 @@ coreSize: anInteger
 
 	self size: anInteger.! !
 
+!CWMars methodsFor: 'accessing' stamp: 'as 8/28/2007 13:38'!
+counters
+
+	^ counters.! !
+
 !CWMars methodsFor: 'defaults' stamp: 'as 4/20/2007 13:09'!
 defaultRounds
 
 	^ 1000.! !
 
-!CWMars methodsFor: 'defaults' stamp: 'as 8/24/2007 17:37'!
+!CWMars methodsFor: 'defaults' stamp: 'as 8/28/2007 14:00'!
 defaultSize
 
-	^ 100.! !
+	^ 1024.! !
 
-!CWMars methodsFor: 'defaults' stamp: 'as 8/26/2007 15:51'!
+!CWMars methodsFor: 'defaults' stamp: 'as 8/28/2007 13:54'!
 defaultStepDelay
 
-	^ 100.! !
+	^ 50.! !
 
 !CWMars methodsFor: 'private' stamp: 'as 7/27/2007 14:45'!
 freeCoreRange: anInteger
@@ -1110,11 +1223,10 @@ size
 
 	^ size ifNil: [ self size: self defaultSize. size. ].! !
 
-!CWMars methodsFor: 'private' stamp: 'as 8/27/2007 11:52'!
+!CWMars methodsFor: 'private' stamp: 'as 8/29/2007 10:51'!
 size: anInteger
 
-	size _ anInteger.
-	self changed: #coreSize.! !
+	size _ anInteger.! !
 
 !CWMars methodsFor: 'accessing' stamp: 'as 4/20/2007 13:08'!
 stepDelay
