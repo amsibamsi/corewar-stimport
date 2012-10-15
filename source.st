@@ -29,14 +29,23 @@ CWRedcodeException subclass: #CWRedcodeDecodeException
 !CWRedcodeDecodeException commentStamp: 'as 4/18/2007 21:19' prior: 0!
 There was an error while trying to decode a redcode program from binary code.!
 
+CWRedcodeException subclass: #CWRedcodeExecutionException
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar-Redcode'!
+
+!CWRedcodeExecutionException commentStamp: 'as 8/29/2007 23:39' prior: 0!
+There was an error while executing a Redcode instruction. This is he case when an instruction is syntactically correct but not semanically.!
+
 CWRedcodeException subclass: #CWRedcodeSyntaxException
 	instanceVariableNames: ''
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar-Redcode'!
 
-!CWRedcodeSyntaxException commentStamp: 'as 4/17/2007 13:50' prior: 0!
-There was an error when trying to compile a Redcode program from source code.!
+!CWRedcodeSyntaxException commentStamp: 'as 8/29/2007 23:38' prior: 0!
+There was an error while trying to compile a Redcode program from source.!
 
 Morph subclass: #CWMarsMorph
 	instanceVariableNames: 'mars cellSize'
@@ -1193,7 +1202,7 @@ rounds: anInteger
 
 	rounds _ anInteger.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 8/29/2007 17:13'!
+!CWMars methodsFor: 'public' stamp: 'as 8/29/2007 23:46'!
 run
 
 	| activePlayers instruction counter |
@@ -1207,10 +1216,10 @@ run
 			[
 				instruction _ CWRedcodeInstruction encoded: (self read: pc).
 				self owner: player at: pc.
-				counter _ instruction executeOn: self for: player.
+				counter _ instruction runOn: self for: player.
 				counters at: player put: counter.
 			]
-				on: CWRedcodeDecodeException
+				on: CWRedcodeDecodeException, CWRedcodeExecutionException
 				do: [
 					activePlayers remove: player.
 					self changed: #playerDeath with: player.
@@ -1368,6 +1377,20 @@ newRedcodeImp
 	^ self source: '
 		MOV 0 1'
 	name: 'Imp'.! !
+
+!CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/29/2007 23:32'!
+newRedcodeStuck
+
+	^ self source: '
+		JMP 0'
+	name: 'Stuck'.! !
+
+!CWRedcode class methodsFor: 'redcodes' stamp: 'as 8/29/2007 23:31'!
+newRedcodeSuicide
+
+	^ self source: '
+		JMP 1'
+	name: 'Suicide'.! !
 
 !CWRedcode class methodsFor: 'instance creation' stamp: 'as 8/8/2007 21:40'!
 newSelectorPrefix
@@ -1827,6 +1850,13 @@ operand2BitShift
 operand2Types
 
 	^ self class operand2Types.! !
+
+!CWRedcodeInstruction methodsFor: 'executing' stamp: 'as 8/29/2007 23:45'!
+runOn: aCWMars for: aCWPlayer
+
+	[ ^ self executeOn: aCWMars for: aCWPlayer.	]
+		on: CWRedcodeException
+		do: [ :ex | CWRedcodeExecutionException signal: ex messageText. ].! !
 
 !CWRedcodeInstruction methodsFor: 'converting' stamp: 'as 4/19/2007 17:11'!
 source
