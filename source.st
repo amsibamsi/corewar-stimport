@@ -217,6 +217,15 @@ testWhitespace
 		'   ADD  1   2      ', String cr, '	SUB	 #3		 @-5		'.
 	self assert: redcode source = ('ADD 1 2', String cr, 'SUB #3 @-5').! !
 
+Object subclass: #CWCoreWar
+	instanceVariableNames: ''
+	classVariableNames: ''
+	poolDictionaries: ''
+	category: 'CoreWar'!
+
+!CWCoreWar commentStamp: 'as 4/30/2007 15:58' prior: 0!
+Main application of Core War.!
+
 Object subclass: #CWMars
 	instanceVariableNames: 'core ownerships programs pc counters size stepDelay rounds'
 	classVariableNames: ''

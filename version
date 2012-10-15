@@ -1,4 +1,4 @@
-(name 'CoreWar-devel-as.11' message '- several small but crucial fixes
+(name 'CoreWar-devel-as.12' message 'started with main application' id 'adde1e26-fffc-11db-8f34-001124784c86' date '11 May 2007' time '10:17:45 pm' author 'as' ancestors ((name 'CoreWar-devel-as.11' message '- several small but crucial fixes
 - added naming to redcode programs' id 'b0baaf0b-f49d-11db-9e39-001124784c86' date '27 April 2007' time '11:00:04 am' author 'as' ancestors ((name 'CoreWar-devel-as.10' message '- fixed internal address handling
 - fixed negative core values' id '289e861e-f42c-11db-a4c8-001124784c86' date '26 April 2007' time '9:27:23 pm' author 'as' ancestors ((name 'CoreWar-devel-as.9' message '- implemented executing methods in all instructions and commands (totally untested)
 - mars almost finished' id '409f9a53-f3f6-11db-9804-001124784c86' date '26 April 2007' time '3:01:30 pm' author 'as' ancestors ((name 'CoreWar-devel-as.8' message 'fixed handling of empty lines and whitespace in source' id 'e354690a-ef25-11db-8b2c-001124784c86' date '20 April 2007' time '11:59:54 am' author 'as' ancestors ((name 'CoreWar-devel-as.7' message '- encoding/sourcing: fixes, rewrites
@@ -7,4 +7,4 @@
 
 - development versions are named *-devel-* and don''t need to run, pass tests or be coherent
 - release versions are named *-release-* and should run, pass all tests and present a package of complete code
-- there is only on version counter for both branches, so each version is either a development or release version (or maybe in the future some other kind of version)' id '77e16b80-ec02-11db-8ab9-001124784c86' date '16 April 2007' time '12:08:48 pm' author 'as' ancestors () stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())
+- there is only on version counter for both branches, so each version is either a development or release version (or maybe in the future some other kind of version)' id '77e16b80-ec02-11db-8ab9-001124784c86' date '16 April 2007' time '12:08:48 pm' author 'as' ancestors () stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())) stepChildren ())
