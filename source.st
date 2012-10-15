@@ -52,22 +52,80 @@ on: aCWMars
 		mars: aCWMars;
 		yourself.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/22/2007 01:00'!
-drawOn: aCanvas! !
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 17:36'!
+borderSize
 
-!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/12/2007 21:02'!
+	^ 10.! !
+
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 17:36'!
+cellGap
+
+	^ 5.! !
+
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 17:35'!
+cellSize
+
+	^ 10.! !
+
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 17:34'!
+cellsPerRow: cellsCount
+
+	^ (self width / self height * (cellsCount sqrt)) rounded.! !
+
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 19:47'!
+drawOn: aCanvas
+
+	| cellsPerRow cellSize cellGap borderSize top left cellsCount |
+	aCanvas fillRectangle: self bounds fillStyle: self fillStyle borderStyle: self borderStyle.
+	cellsCount _ mars coreSize.
+	cellsPerRow _ self cellsPerRow: cellsCount.
+	cellSize _ self cellSize.
+	cellGap _ self cellGap.
+	borderSize _ self borderSize.
+	top _ self top.
+	left _ self left.
+	0 to: cellsCount - 1 do: [
+		:index |
+		| x y r c |
+		x _ (index \\ cellsPerRow) * (cellSize + cellGap) + borderSize.
+		y _ (index // cellsPerRow) * (cellSize + cellGap) + borderSize.
+		r _ (left + x) @ (top + y) extent: cellSize @ cellSize.
+		c _ (mars color: index) ifNil: [ self neutralColor. ].
+		aCanvas fillRectangle: r color: c.
+	].! !
+
+!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/24/2007 20:01'!
 mars: aCWMars
 
-	mars _ aCWMars.! !
+	mars _ aCWMars.
+	mars addDependent: self.! !
+
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 17:36'!
+neutralColor
+
+	^ Color gray lighter.! !
+
+!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/24/2007 19:57'!
+update: aSymbol
+
+	aSymbol = #core ifTrue: [].! !
 
 Object subclass: #CWCoreWar
-	instanceVariableNames: 'mars window programs customPrograms players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize delay logText playerColors'
+	instanceVariableNames: 'mars window programs customPrograms players morphs selectedProgramIndex selectedCustomProgramIndex selectedPlayerIndex coreSize logText playerColors simulation'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
 
 !CWCoreWar commentStamp: 'as 4/30/2007 15:58' prior: 0!
 Main application of Core War.!
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/23/2007 17:09'!
+abort
+
+	simulation ifNotNil: [
+		simulation terminate.
+		simulation _ nil.
+	].! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:08'!
 addCustomProgram
@@ -406,16 +464,16 @@ buildProgramSelectionList
 		borderColor: Color gray muchLighter
 	).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:06'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/24/2007 11:42'!
 buildRunButtons
 
-	morphs at: #startButton put: (
+	morphs at: #runButton put: (
 		(self
 			buildButtonOn: self
 			getState: #offButtonState
-			action: #start
-			label: 'Start')
-		setBalloonText: 'Start the battle'
+			action: #runPause
+			label: 'Run')
+		setBalloonText: 'Start the battle or pause running battle'
 	).
 	morphs at: #abortButton put: (
 		(self
@@ -429,7 +487,7 @@ buildRunButtons
 		color: self windowColor;
 		layoutPolicy: ProportionalLayout new;
 		layoutInset: 3;
-		addMorph: (morphs at: #startButton)
+		addMorph: (morphs at: #runButton)
 			fullFrame: (LayoutFrame fractions: (0 @ 0 corner: 0 @ 0)
 				offsets: (0 @ 0 corner: self buttonWidth * 3 @ self buttonHeight));
 		addMorph: (morphs at: #abortButton)
@@ -466,12 +524,12 @@ coreSizeText
 
 	^ Text fromString: coreSize asString.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/22/2007 01:03'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/24/2007 16:03'!
 coreSizeText: aText
 
 	| size |
 	size _ aText asString asInteger.
-	size ifNil: [ size _ self defaultCoreSize. ].
+	size ifNil: [ size _ mars defaultSize. ].
 	size < 1 ifTrue: [ size _ 1. ].
 	coreSize _ size.
 	self changed: #coreSizeText.
@@ -482,29 +540,19 @@ customPrograms
 
 	^ OrderedCollection new.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/22/2007 01:02'!
-defaultCoreSize
-
-	^ 1000.! !
-
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/22/2007 01:02'!
-defaultDelay
-
-	^ 0.! !
-
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/22/2007 00:56'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/23/2007 15:10'!
 delayText
 
-	^ Text fromString: delay asString.! !
+	^ Text fromString: mars stepDelay asString.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/22/2007 01:02'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/24/2007 16:04'!
 delayText: aText
 
 	| size |
 	size _ aText asString asInteger.
-	size ifNil: [ size _ self defaultDelay. ].
+	size ifNil: [ size _ mars defaultStepDelay. ].
 	size < 0 ifTrue: [ size _ 0. ].
-	delay _ size.
+	mars stepDelay: size.
 	self changed: #delayText.
 	^ true.! !
 
@@ -525,15 +573,14 @@ findLeastUsedPlayerColor
 	].
 	^ color key.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/22/2007 01:02'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/24/2007 16:04'!
 initialize
 
 	mars _ CWMars new.
 	players _ OrderedCollection new.
 	morphs _ Dictionary new.
 	selectedProgramIndex _ selectedCustomProgramIndex _ selectedPlayerIndex _ 0.
-	coreSize _ self defaultCoreSize.
-	delay _ self defaultDelay.
+	coreSize _ mars defaultSize.
 	self initializePrograms.
 	self initializePlayerColors.
 	self initializeWindow.! !
@@ -708,6 +755,25 @@ removePlayerColor: aColor
 	value _ playerColors at: aColor.
 	playerColors at: aColor put: value - 1.! !
 
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/24/2007 18:22'!
+runPause
+
+	simulation ifNil: [
+		mars
+			setPlayers: players;
+			coreSize: coreSize.
+		simulation _ [ mars run. simulation _ nil. ] newProcess.
+		simulation resume.
+	] ifNotNil: [
+		simulation isSuspended ifTrue: [
+			simulation resume.
+		] ifFalse: [
+			simulation isRunning ifTrue: [
+				simulation suspend.
+			].
+		].
+	].! !
+
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
 selectCustomProgramIndex: aNumber
 
@@ -767,7 +833,7 @@ windowColor
 	^ Color orange lighter.! !
 
 Object subclass: #CWMars
-	instanceVariableNames: 'core ownerships programs pc counters size stepDelay rounds'
+	instanceVariableNames: 'core ownerships players pc counters size stepDelay rounds'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'CoreWar'!
@@ -795,15 +861,12 @@ valueSize
 
 	^ 2 raisedTo: self valueBits.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 8/8/2007 17:02'!
-addProgram: aCWRedcode
+!CWMars methodsFor: 'core' stamp: 'as 8/24/2007 19:45'!
+color: integerAddress
 
-	self programs add: aCWRedcode.! !
-
-!CWMars methodsFor: 'public' stamp: 'as 8/8/2007 17:02'!
-addPrograms: aCollection
-
-	aCollection do: [ :aCWRedcode | self addProgram: aCWRedcode. ].! !
+	| owner |
+	owner _ ownerships at: (self internalAddress: integerAddress) ifAbsent: nil.
+	^ owner ifNil: [ nil. ] ifNotNil: [ owner color. ].! !
 
 !CWMars methodsFor: 'private' stamp: 'as 4/26/2007 18:48'!
 coreAddress: anInteger
@@ -836,15 +899,15 @@ defaultRounds
 
 	^ 1000.! !
 
-!CWMars methodsFor: 'defaults' stamp: 'as 4/26/2007 11:03'!
+!CWMars methodsFor: 'defaults' stamp: 'as 8/24/2007 17:37'!
 defaultSize
 
-	^ 1024.! !
+	^ 100.! !
 
-!CWMars methodsFor: 'defaults' stamp: 'as 4/27/2007 10:41'!
+!CWMars methodsFor: 'defaults' stamp: 'as 8/23/2007 15:04'!
 defaultStepDelay
 
-	^ 1.! !
+	^ 0.! !
 
 !CWMars methodsFor: 'private' stamp: 'as 7/27/2007 14:45'!
 freeCoreRange: anInteger
@@ -863,6 +926,11 @@ freeCoreRange: anInteger
 	].
 	^ nil.
 			! !
+
+!CWMars methodsFor: 'initialize-release' stamp: 'as 8/24/2007 18:16'!
+initialize
+
+	self reset.! !
 
 !CWMars methodsFor: 'initialize-release' stamp: 'as 4/26/2007 10:53'!
 initializeCore
@@ -921,12 +989,12 @@ loadProgram: aCWRedcode
 	].
 	^ start.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 7/27/2007 14:51'!
+!CWMars methodsFor: 'private' stamp: 'as 8/24/2007 18:52'!
 loadPrograms
 
-	self programs do: [
-		:program |
-		counters at: program put: (self loadProgram: program).
+	self players do: [
+		:player |
+		counters at: player put: (self loadProgram: player program).
 	].! !
 
 !CWMars methodsFor: 'core' stamp: 'as 4/26/2007 21:26'!
@@ -939,25 +1007,27 @@ minValue
 
 	^ self class minValue.! !
 
-!CWMars methodsFor: 'core' stamp: 'as 4/26/2007 12:01'!
+!CWMars methodsFor: 'core' stamp: 'as 8/24/2007 18:50'!
 owner: integerAddress
 
-	^ ownerships at: (self internalAddress: integerAddress).! !
+	^ ownerships at: (self internalAddress: integerAddress) ifAbsent: nil.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 4/26/2007 12:01'!
-owner: aCWRedcode at: integerAddress
+!CWMars methodsFor: 'private' stamp: 'as 8/24/2007 19:59'!
+owner: aCWPlayer at: integerAddress
 
-	^ ownerships at: (self internalAddress: integerAddress) put: aCWRedcode.! !
+	ownerships at: (self internalAddress: integerAddress) put: aCWPlayer.
+	self changed: #core.
+	^ aCWPlayer.! !
 
 !CWMars methodsFor: 'accessing' stamp: 'as 4/20/2007 13:32'!
 pc
 
 	^ pc.! !
 
-!CWMars methodsFor: 'accessing' stamp: 'as 4/17/2007 11:53'!
-programs
+!CWMars methodsFor: 'accessing' stamp: 'as 8/24/2007 18:17'!
+players
 
-	^ programs ifNil: [ programs _ OrderedCollection new. ].! !
+	^ players ifNil: [ players _ OrderedCollection new. ].! !
 
 !CWMars methodsFor: 'initialize-release' stamp: 'as 4/26/2007 21:25'!
 randomValue
@@ -974,6 +1044,14 @@ read: integerAddress
 	value _ (core at: address).
 	^ value.! !
 
+!CWMars methodsFor: 'initialize-release' stamp: 'as 8/24/2007 18:16'!
+reset
+
+	self
+		initializeCore;
+		initializeOwnerships;
+		initializeCounters.! !
+
 !CWMars methodsFor: 'accessing' stamp: 'as 4/20/2007 13:09'!
 rounds
 
@@ -984,19 +1062,15 @@ rounds: anInteger
 
 	rounds _ anInteger.! !
 
-!CWMars methodsFor: 'public' stamp: 'as 7/27/2007 14:56'!
+!CWMars methodsFor: 'public' stamp: 'as 8/24/2007 18:42'!
 run
 
-	| players instruction counter |
-	self
-		initializeCore;
-		initializeOwnerships;
-		initializeCounters;
-		loadPrograms.
-	players _ programs copy.
+	| activePlayers instruction counter |
+	self reset; loadPrograms.
+	activePlayers _ self players copy.
 	1 to: self rounds do: [
 		:round |
-		players do: [
+		activePlayers do: [
 			:player |
 			pc _ counters at: player.
 			[
@@ -1007,13 +1081,19 @@ run
 			]
 				on: CWRedcodeDecodeException
 				do: [
-					players remove: player.
-					players size = 1 ifTrue: [ ^ players. ].
+					activePlayers remove: player.
+					activePlayers size = 1 ifTrue: [ ^ activePlayers. ].
 				].
 		].
 		(Delay forMilliseconds: self stepDelay) wait.
 	].
-	^ players.! !
+	^ activePlayers.! !
+
+!CWMars methodsFor: 'public' stamp: 'as 8/24/2007 18:50'!
+setPlayers: aCollection
+
+	players _ nil.
+	self players addAll: aCollection.! !
 
 !CWMars methodsFor: 'private' stamp: 'as 4/19/2007 17:15'!
 size
@@ -1040,15 +1120,15 @@ valueSize
 
 	^ self class valueSize.! !
 
-!CWMars methodsFor: 'core' stamp: 'as 4/26/2007 21:21'!
-write: valueInteger at: integerAddress for: aCWRedcode
+!CWMars methodsFor: 'core' stamp: 'as 8/24/2007 19:00'!
+write: valueInteger at: integerAddress for: aCWPlayer
 
 	"Write value at the specified address."
 	
 	| value |
 	value _ self internalValue: valueInteger.
 	core at: (self internalAddress: integerAddress) put: value.
-	self owner: aCWRedcode at: integerAddress.
+	self owner: aCWPlayer at: integerAddress.
 	^ value.! !
 
 Object subclass: #CWPlayer
@@ -1082,6 +1162,11 @@ color: aColor
 printOn: aStream
 
 	aStream nextPutAll: program name, ' (', (color name ifNil: [ 'unknown color'. ]), ')'.! !
+
+!CWPlayer methodsFor: 'accessing' stamp: 'as 8/23/2007 17:06'!
+program
+
+	^ program.! !
 
 !CWPlayer methodsFor: 'accessing' stamp: 'as 8/8/2007 17:39'!
 program: aCWRedcode
@@ -1284,13 +1369,13 @@ symbol
 
 	^ #ADD.! !
 
-!CWRedcodeAddInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:49'!
-executeOn: mars for: redcode
+!CWRedcodeAddInstruction methodsFor: 'executing' stamp: 'as 8/24/2007 19:01'!
+executeOn: mars for: player
 
 	| value |
 	value _ (operand1 valueOn: mars) + (operand2 valueOn: mars).
-	mars write: value at: (operand2 locationOn: mars) for: redcode.
-	^ super executeOn: mars for: redcode.! !
+	mars write: value at: (operand2 locationOn: mars) for: player.
+	^ super executeOn: mars for: player.! !
 
 CWRedcodeInstruction subclass: #CWRedcodeCompareInstruction
 	instanceVariableNames: ''
@@ -1312,11 +1397,11 @@ symbol
 
 	^ #CMP.! !
 
-!CWRedcodeCompareInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:50'!
-executeOn: mars for: redcode
+!CWRedcodeCompareInstruction methodsFor: 'executing' stamp: 'as 8/24/2007 19:32'!
+executeOn: mars for: player
 
 	(operand1 valueOn: mars) = (operand2 valueOn: mars) ifTrue: [
-		^ super executeOn: mars for: redcode.
+		^ super executeOn: mars for: player.
 	] ifFalse: [
 		^ mars pc + 2.
 	].! !
@@ -1350,11 +1435,11 @@ symbol
 
 	^ #DAT.! !
 
-!CWRedcodeDataInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:50'!
-executeOn: mars for: redcode
+!CWRedcodeDataInstruction methodsFor: 'executing' stamp: 'as 8/24/2007 19:32'!
+executeOn: mars for: player
 
-	mars write: (operand1 valueOn: mars) at: mars pc for: redcode.
-	^ super executeOn: mars for: redcode.! !
+	mars write: (operand1 valueOn: mars) at: mars pc for: player.
+	^ super executeOn: mars for: player.! !
 
 CWRedcodeInstruction subclass: #CWRedcodeDecrementJumpZeroInstruction
 	instanceVariableNames: ''
@@ -1380,13 +1465,13 @@ symbol
 
 	^ #DJZ.! !
 
-!CWRedcodeDecrementJumpZeroInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:50'!
-executeOn: mars for: redcode
+!CWRedcodeDecrementJumpZeroInstruction methodsFor: 'executing' stamp: 'as 8/24/2007 19:32'!
+executeOn: mars for: player
 
 	((operand1 valueOn: mars) - 1) = 0 ifTrue: [
 		^ operand2 locationOn: mars.
 	] ifFalse: [
-		^ super executeOn: mars for: redcode.
+		^ super executeOn: mars for: player.
 	].
 	! !
 
@@ -1552,8 +1637,8 @@ encodingBits
 
 	^ self class encodingBits.! !
 
-!CWRedcodeInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 13:23'!
-executeOn: aCWMars for: aCWRedcode
+!CWRedcodeInstruction methodsFor: 'executing' stamp: 'as 8/24/2007 19:01'!
+executeOn: aCWMars for: aCWPlayer
 
 	"Execute the instruction on the MARS simulator.
 	 Return the address for the next instruction."
@@ -1660,8 +1745,8 @@ symbol
 
 	^ #JMP.! !
 
-!CWRedcodeJumpInstruction methodsFor: 'executing' stamp: 'as 4/26/2007 14:38'!
-executeOn: mars for: redcode
+!CWRedcodeJumpInstruction methodsFor: 'executing' stamp: 'as 8/24/2007 19:32'!
+executeOn: mars for: player
 
 	^ operand1 locationOn: mars.! !
 
@@ -1689,13 +1774,13 @@ symbol
 
 	^ #JMZ.! !
 
-!CWRedcodeJumpZeroInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:51'!
-executeOn: mars for: redcode
+!CWRedcodeJumpZeroInstruction methodsFor: 'executing' stamp: 'as 8/24/2007 19:33'!
+executeOn: mars for: player
 
 	(operand1 valueOn: mars) = 0 ifTrue: [
 		^ operand2 locationOn: mars.
 	] ifFalse: [
-		^ super executeOn: mars for: redcode.
+		^ super executeOn: mars for: player.
 	].! !
 
 CWRedcodeInstruction subclass: #CWRedcodeMoveInstruction
@@ -1722,11 +1807,11 @@ symbol
 
 	^ #MOV.! !
 
-!CWRedcodeMoveInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:36'!
-executeOn: mars for: redcode
+!CWRedcodeMoveInstruction methodsFor: 'executing' stamp: 'as 8/24/2007 19:33'!
+executeOn: mars for: player
 
-	mars write: (operand1 valueOn: mars) at: (operand2 locationOn: mars) for: redcode.
-	^ super executeOn: mars for: redcode.! !
+	mars write: (operand1 valueOn: mars) at: (operand2 locationOn: mars) for: player.
+	^ super executeOn: mars for: player.! !
 
 CWRedcodeInstruction subclass: #CWRedcodeSubtractInstruction
 	instanceVariableNames: ''
@@ -1752,13 +1837,13 @@ symbol
 
 	^ #SUB.! !
 
-!CWRedcodeSubtractInstruction methodsFor: 'executing' stamp: 'as 4/27/2007 10:51'!
-executeOn: mars for: redcode
+!CWRedcodeSubtractInstruction methodsFor: 'executing' stamp: 'as 8/24/2007 19:33'!
+executeOn: mars for: player
 
 	| value |
 	value _ (operand2 valueOn: mars) - (operand1 valueOn: mars).
-	mars write: value at: (operand2 locationOn: mars) for: redcode.
-	^ super executeOn: mars for: redcode.! !
+	mars write: value at: (operand2 locationOn: mars) for: player.
+	^ super executeOn: mars for: player.! !
 
 Object subclass: #CWRedcodeOperand
 	instanceVariableNames: 'value'
@@ -1910,10 +1995,10 @@ valueOn: mars
 
 	^ mars read: (self locationOn: mars).! !
 
-!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 4/18/2007 10:20'!
+!CWRedcodeOperand class methodsFor: 'instance creation' stamp: 'as 8/24/2007 19:41'!
 allOperands
 
-	"A set of operands allowed in this language."
+	"A set of operands allowed in Redcode."
 	
 	^ Set new
 		add: CWRedcodeImmediateOperand;
