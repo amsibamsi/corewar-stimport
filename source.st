@@ -56,74 +56,67 @@ Morph subclass: #CWMarsMorph
 !CWMarsMorph commentStamp: 'as 8/27/2007 13:57' prior: 0!
 Graphical representation of MARS.!
 
-!CWMarsMorph class methodsFor: 'instance creation' stamp: 'as 8/12/2007 21:09'!
+!CWMarsMorph class methodsFor: 'instance creation' stamp: 'as 8/31/2007 09:52'!
 on: aCWMars
 
 	^ self new
 		mars: aCWMars;
+		initializeCells;
 		yourself.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 17:36'!
-borderSize
+!CWMarsMorph methodsFor: 'building' stamp: 'as 8/30/2007 17:49'!
+cellColor: index
 
-	^ 10.! !
+	^ (mars color: index) ifNil: [ self neutralColor. ].! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/29/2007 15:38'!
-cellGap
+!CWMarsMorph methodsFor: 'building' stamp: 'as 8/31/2007 10:32'!
+cellMorph: index
 
-	^ self cellSize // 2.! !
-
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/30/2007 11:43'!
-cellRectangle: aNumber
-
-	| columns x y r |
-	columns _ self cellsPerRow.
-	x _ (aNumber \\ columns) * (self cellSize + self cellGap) + self borderSize.
-	y _ (aNumber // columns) * (self cellSize + self cellGap) + self borderSize + self topBorder.
-	r _ (self bounds left + x) @ (self bounds top + y) extent: self cellSize @ self cellSize.
-	^ r.! !
+	^ Morph new
+		color: (self cellColor: index);
+		extent: self cellSize @ self cellSize;
+		yourself.! !
 
 !CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/29/2007 14:55'!
 cellSize
 
 	^ cellSize ifNil: [ cellSize _ self defaultCellSize. ].! !
 
-!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/29/2007 15:01'!
+!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/31/2007 17:44'!
 cellSize: aNumber
 
 	cellSize _ aNumber.
-	self changed.! !
+	self updateCellSize.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/28/2007 13:23'!
-cellsPerRow
+!CWMarsMorph methodsFor: 'building' stamp: 'as 8/31/2007 10:27'!
+columns
 
 	^ (self width / self height * (mars coreSize sqrt)) rounded.! !
 
-!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/29/2007 14:54'!
+!CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/31/2007 17:33'!
 defaultCellSize
 
-	^ 7.! !
+	^ 5.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/30/2007 11:48'!
-drawOn: aCanvas
+!CWMarsMorph methodsFor: 'initialize-release' stamp: 'as 8/31/2007 17:36'!
+initialize
 
-	"Clear canvas"
-	aCanvas fillRectangle: self bounds fillStyle: self fillStyle borderStyle: self borderStyle.
-	
+	super initialize.
+	self layoutPolicy: TableLayout new;
+		listDirection: #leftToRight;
+		cellPositioning: #topLeft;
+		wrapDirection: #topToBottom;
+		color: Color white.! !
+
+!CWMarsMorph methodsFor: 'initialize-release' stamp: 'as 8/31/2007 17:44'!
+initializeCells
+
+	self removeAllMorphs.
 	0 to: mars coreSize - 1 do: [
 		:index |
-		self drawRect: index on: aCanvas.
+		self addMorph: (self cellMorph: index).
 	].
-	aCanvas
-		drawString: 'Round ', mars currentRound asString, ' of ', mars rounds asString
-		at: self bounds topLeft + (self borderSize @ self borderSize)! !
-
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/30/2007 11:38'!
-drawRect: index on: aCanvas
-
-	aCanvas
-		fillRectangle: (self cellRectangle: index)
-		color: ((mars color: index) ifNil: [ self neutralColor. ]).! !
+	self updateCellSize.! !
 
 !CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/27/2007 11:49'!
 mars: aCWMars
@@ -131,20 +124,53 @@ mars: aCWMars
 	mars _ aCWMars.
 	mars addDependent: self.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/24/2007 17:36'!
+!CWMarsMorph methodsFor: 'building' stamp: 'as 8/24/2007 17:36'!
 neutralColor
 
 	^ Color gray lighter.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/30/2007 11:43'!
-topBorder
-
-	^ 25.! !
-
-!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/29/2007 15:00'!
+!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/30/2007 16:41'!
 update: aSymbol
 
-	aSymbol = #core ifTrue: [ self changed. ].! !
+	(self updates includes: aSymbol) ifTrue: [
+		self perform: ('update', aSymbol asString capitalized) asSymbol.
+	].! !
+
+!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/30/2007 17:40'!
+update: aSymbol with: anObject
+
+	(self updateWiths includes: aSymbol) ifTrue: [
+		self perform: ('update', aSymbol asString capitalized, ':') asSymbol with: anObject.
+	].! !
+
+!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/31/2007 10:46'!
+updateCell: index
+
+	(submorphs at: index + 1) color: (mars color: index); changed.! !
+
+!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/31/2007 17:44'!
+updateCellSize
+
+	submorphs do: [
+		:morph |
+		morph extent: cellSize @ cellSize.
+	].
+	self cellInset: cellSize // 2.! !
+
+!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/30/2007 20:51'!
+updateCore
+
+	self initializeCells.! !
+
+!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/30/2007 17:39'!
+updateWiths
+
+	^ #(#cell).! !
+
+!CWMarsMorph methodsFor: 'updating' stamp: 'as 8/31/2007 17:44'!
+updates
+
+	^ #(#core #cellSize).! !
 
 Object subclass: #CWCoreWar
 	instanceVariableNames: 'mars window programs players morphs selectedProgramIndex selectedPlayerIndex coreSize logText playerColors simulation rounds'
@@ -155,12 +181,12 @@ Object subclass: #CWCoreWar
 !CWCoreWar commentStamp: 'as 8/27/2007 13:57' prior: 0!
 Core War morphic GUI.!
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/29/2007 13:37'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/31/2007 10:07'!
 abort
 
 	simulation ifNotNil: [
 		simulation terminate.
-		self logInfo: 'Simulation aborted'.
+		self logError: 'Aborted'.
 		simulation _ nil.
 	].! !
 
@@ -302,13 +328,14 @@ buildLogPanel
 			accept: nil
 	).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/27/2007 14:13'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/31/2007 17:35'!
 buildMarsMorph
 
-	morphs at: #marsMorph put: (
-		CWMarsMorph on: mars
-	).
-	^ morphs at: #marsMorph! !
+	| pane |
+	morphs at: #marsMorph put: (CWMarsMorph on: mars).
+	pane _ ScrollPane new.
+	pane scroller addMorph: (morphs at: #marsMorph).
+	^ pane.! !
 
 !CWCoreWar methodsFor: 'window-building' stamp: 'as 8/29/2007 15:24'!
 buildOptionsPanel
@@ -520,7 +547,7 @@ cellSizeText
 
 	^ Text fromString: (morphs at: #marsMorph) cellSize asString.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/29/2007 15:01'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/31/2007 10:18'!
 cellSizeText: aText
 
 	| size |
@@ -628,10 +655,10 @@ initializePrograms
 
 	programs _ OrderedCollection newFrom: CWRedcode allRedcodes.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/29/2007 15:23'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/31/2007 09:46'!
 initializeWindow
 
-	window _ SystemWindow labelled: 'Core War'.
+	window _ SystemWindow labelled: self windowTitle.
 	window setWindowColor: self windowColor.
 	window minimumExtent: 640@480.
 
@@ -657,6 +684,11 @@ isPlayerSelected
 isProgramSelected
 
 	^ self selectedProgramIndex ~= 0.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/31/2007 10:02'!
+isRunning
+
+	^ simulation notNil and: [ simulation isSuspended. ]! !
 
 !CWCoreWar methodsFor: 'logging' stamp: 'as 8/12/2007 13:54'!
 logClear
@@ -787,7 +819,7 @@ roundsText: aText
 	self changed: #roundsText.
 	^ true.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/29/2007 14:44'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/31/2007 10:06'!
 runPause
 
 	simulation ifNil: [
@@ -800,10 +832,10 @@ runPause
 	] ifNotNil: [
 		simulation isSuspended ifTrue: [
 			simulation resume.
-			self logInfo: 'Simulation resumed'.
+			self logInfo: 'Resuming'.
 		] ifFalse: [
 			simulation suspend.
-			self logInfo: 'Simulation paused'.
+			self logInfo: 'Pausing'.
 		].
 	].! !
 
@@ -829,15 +861,15 @@ selectedProgramIndex
 
 	^ selectedProgramIndex.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/29/2007 16:06'!
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/31/2007 10:06'!
 simulate
 
 	| winners |
-	self logClear; logInfo: 'Simulation starting'.
+	self logClear; logInfo: 'Starting'.
 	winners _ ''.
 	[
 		mars run do: [ :winner | winners _ winners, ' ', winner asString. ].
-		self logInfo: 'Simulation finished, winners are:', winners.
+		self logInfo: 'Finished, winners are:', winners.
 	] on: CWMarsException do: [
 		:e |
 		self logError: e asString.
@@ -850,17 +882,49 @@ unselectPlayer
 	selectedPlayerIndex _ 0.
 	self changed: #selectedPlayerIndex.! !
 
-!CWCoreWar methodsFor: 'updating' stamp: 'as 8/29/2007 17:15'!
+!CWCoreWar methodsFor: 'updating' stamp: 'as 8/31/2007 09:44'!
+update: aSymbol
+
+	(self updates includes: aSymbol) ifTrue: [
+		self perform: ('update', aSymbol asString capitalized) asSymbol.
+	].! !
+
+!CWCoreWar methodsFor: 'updating' stamp: 'as 8/31/2007 09:43'!
 update: aSymbol with: anObject
 
-	aSymbol = #playerDeath ifTrue: [
-		self logInfo: 'Player ', anObject asString, ' died'.
+	(self updateWiths includes: aSymbol) ifTrue: [
+		self perform: ('update', aSymbol asString capitalized, ':') asSymbol with: anObject.
 	].! !
+
+!CWCoreWar methodsFor: 'updating' stamp: 'as 8/31/2007 17:39'!
+updateCurrentRound
+
+	window setLabel: self windowTitle, ' (round ', mars currentRound asString, ' of ', mars rounds asString, ')'; changed.! !
+
+!CWCoreWar methodsFor: 'updating' stamp: 'as 8/31/2007 09:42'!
+updatePlayerDeatch: aCWPlayer
+
+	self logInfo: 'Player ', aCWPlayer asString, ' died'.! !
+
+!CWCoreWar methodsFor: 'updating' stamp: 'as 8/31/2007 09:43'!
+updateWiths
+
+	^ #(#playerDeath).! !
+
+!CWCoreWar methodsFor: 'updating' stamp: 'as 8/31/2007 09:44'!
+updates
+
+	^ #(#currentRound).! !
 
 !CWCoreWar methodsFor: 'view' stamp: 'as 8/11/2007 16:23'!
 windowColor
 
 	^ Color orange lighter.! !
+
+!CWCoreWar methodsFor: 'view' stamp: 'as 8/31/2007 09:46'!
+windowTitle
+
+	^ 'Core War'.! !
 
 Object subclass: #CWMars
 	instanceVariableNames: 'core ownerships players pc counters size stepDelay rounds currentRound'
@@ -1048,11 +1112,11 @@ owner: integerAddress
 
 	^ ownerships at: (self internalAddress: integerAddress) ifAbsent: nil.! !
 
-!CWMars methodsFor: 'private' stamp: 'as 8/24/2007 19:59'!
+!CWMars methodsFor: 'private' stamp: 'as 8/31/2007 17:48'!
 owner: aCWPlayer at: integerAddress
 
 	ownerships at: (self internalAddress: integerAddress) put: aCWPlayer.
-	self changed: #core.
+	self changed: #cell with: (self coreAddress: integerAddress).
 	^ aCWPlayer.! !
 
 !CWMars methodsFor: 'accessing' stamp: 'as 4/20/2007 13:32'!
