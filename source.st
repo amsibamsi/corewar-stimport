@@ -52,10 +52,8 @@ on: aCWMars
 		mars: aCWMars;
 		yourself.! !
 
-!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/12/2007 21:49'!
-drawOn: aCanvas
-
-	aCanvas drawString: 'test' at: 50@50.! !
+!CWMarsMorph methodsFor: 'drawing' stamp: 'as 8/22/2007 01:00'!
+drawOn: aCanvas! !
 
 !CWMarsMorph methodsFor: 'accessing' stamp: 'as 8/12/2007 21:02'!
 mars: aCWMars
@@ -139,16 +137,17 @@ buildButtonOn: anObject getState: getStateSel action: actionSel label: aString
 		label: aString;
 		onColor: Color gray muchLighter offColor: Color gray muchLighter.! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:04'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/22/2007 00:54'!
 buildCoreSizeOption
 
 	morphs at: #coreSizeText put: (
 		(PluggableTextMorph
 			on: self
-			text: #coreSize
-			accept: #coreSize:)
+			text: #coreSizeText
+			accept: #coreSizeText:)
 		color: Color white;
-		setBalloonText: 'Number of cells in the core'
+		setBalloonText: 'Number of cells in the core';
+		acceptOnCR: true
 	).
 	(morphs at: #coreSizeText) extension setProperty: #noVScrollBarPlease toValue: true.
 	^ Morph new
@@ -226,16 +225,17 @@ buildCustomProgramSelectionList
 		borderColor: Color gray muchLighter
 	).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/17/2007 20:05'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/22/2007 01:00'!
 buildDelayOption
 
 	morphs at: #delayText put: (
 		(PluggableTextMorph
 			on: self
-			text: #delay
-			accept: #delay:)
+			text: #delayText
+			accept: #delayText:)
 		color: Color white;
-		setBalloonText: 'Delay in milliseconds between steps'
+		setBalloonText: 'Delay in milliseconds between steps';
+		acceptOnCR: true
 	).
 	(morphs at: #delayText) extension setProperty: #noVScrollBarPlease toValue: true.
 	^ Morph new
@@ -461,30 +461,52 @@ contents
 
 	^ self logText.! !
 
-!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/11/2007 16:17'!
-coreSize
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/22/2007 00:52'!
+coreSizeText
 
-	^ coreSize ifNil: [ '100'. ].! !
+	^ Text fromString: coreSize asString.! !
 
-!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/11/2007 16:16'!
-coreSize: aString
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/22/2007 01:03'!
+coreSizeText: aText
 
-	^ coreSize _ aString.! !
+	| size |
+	size _ aText asString asInteger.
+	size ifNil: [ size _ self defaultCoreSize. ].
+	size < 1 ifTrue: [ size _ 1. ].
+	coreSize _ size.
+	self changed: #coreSizeText.
+	^ true.! !
 
 !CWCoreWar methodsFor: 'accessing' stamp: 'as 8/17/2007 09:09'!
 customPrograms
 
 	^ OrderedCollection new.! !
 
-!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/11/2007 16:49'!
-delay
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/22/2007 01:02'!
+defaultCoreSize
 
-	^ delay.! !
+	^ 1000.! !
 
-!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/11/2007 16:50'!
-delay: aString
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/22/2007 01:02'!
+defaultDelay
 
-	^ delay _ aString.! !
+	^ 0.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/22/2007 00:56'!
+delayText
+
+	^ Text fromString: delay asString.! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/22/2007 01:02'!
+delayText: aText
+
+	| size |
+	size _ aText asString asInteger.
+	size ifNil: [ size _ self defaultDelay. ].
+	size < 0 ifTrue: [ size _ 0. ].
+	delay _ size.
+	self changed: #delayText.
+	^ true.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 09:08'!
 editCustomProgram
@@ -503,12 +525,15 @@ findLeastUsedPlayerColor
 	].
 	^ color key.! !
 
-!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/17/2007 11:55'!
+!CWCoreWar methodsFor: 'initialize-release' stamp: 'as 8/22/2007 01:02'!
 initialize
 
 	mars _ CWMars new.
 	players _ OrderedCollection new.
 	morphs _ Dictionary new.
+	selectedProgramIndex _ selectedCustomProgramIndex _ selectedPlayerIndex _ 0.
+	coreSize _ self defaultCoreSize.
+	delay _ self defaultDelay.
 	self initializePrograms.
 	self initializePlayerColors.
 	self initializeWindow.! !
@@ -600,6 +625,32 @@ open
 
 	window openInWorld.! !
 
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/18/2007 11:52'!
+playerDown
+
+	| index |
+	self isPlayerSelected ifTrue: [
+	index _ selectedPlayerIndex.
+		(index > 0 and: [ index < players size. ]) ifTrue: [
+			players swap: index with: index + 1.
+			self selectPlayerIndex: index + 1.
+			self changed: #players.
+		].
+	].! !
+
+!CWCoreWar methodsFor: 'controller' stamp: 'as 8/18/2007 11:51'!
+playerUp
+
+	| index |
+	self isPlayerSelected ifTrue: [
+	index _ selectedPlayerIndex.
+		(index > 1 and: [ index <= players size. ]) ifTrue: [
+			players swap: index with: index - 1.
+			self selectPlayerIndex: index - 1.
+			self changed: #players.
+		].
+	].! !
+
 !CWCoreWar methodsFor: 'accessing' stamp: 'as 8/8/2007 16:56'!
 players
 
@@ -677,20 +728,20 @@ selectProgramIndex: aNumber
 	self changed: #selectedProgramIndex.
 	self unselectCustomProgram.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 08:25'!
+!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/18/2007 11:43'!
 selectedCustomProgramIndex
 
-	^ selectedCustomProgramIndex ifNil: [ 0. ].! !
+	^ selectedCustomProgramIndex.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/11/2007 14:34'!
+!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/18/2007 11:43'!
 selectedPlayerIndex
 
-	^ selectedPlayerIndex ifNil: [ 0. ].! !
+	^ selectedPlayerIndex.! !
 
-!CWCoreWar methodsFor: 'controller' stamp: 'as 8/16/2007 23:02'!
+!CWCoreWar methodsFor: 'accessing' stamp: 'as 8/18/2007 11:43'!
 selectedProgramIndex
 
-	^ selectedProgramIndex ifNil: [ 0. ].! !
+	^ selectedProgramIndex.! !
 
 !CWCoreWar methodsFor: 'controller' stamp: 'as 8/17/2007 14:05'!
 unselectCustomProgram
