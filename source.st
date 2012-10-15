@@ -393,7 +393,7 @@ buildPlayerSelectionButtons
 		addMorph: (morphs at: #cleanPlayersButton)
 			fullFrame: (LayoutFrame fractions: (0 @ (2/3) corner: 1 @ 1)).! !
 
-!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/11/2007 15:48'!
+!CWCoreWar methodsFor: 'window-building' stamp: 'as 8/30/2007 11:58'!
 buildPlayerSelectionList
 
 	^ morphs at: #playerSelectionList put: (
@@ -402,7 +402,7 @@ buildPlayerSelectionList
 			list: #players
 			selected: #selectedPlayerIndex
 			changeSelected: #selectPlayerIndex:)
-		setBalloonText: 'Players.';
+		setBalloonText: 'Players';
 		borderWidth: 1;
 		borderColor: Color gray muchLighter
 	).! !
